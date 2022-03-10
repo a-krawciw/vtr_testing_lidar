@@ -1,6 +1,8 @@
 #include <filesystem>
 
 #include "rclcpp/rclcpp.hpp"
+#include "rosgraph_msgs/msg/clock.hpp"
+#include "std_msgs/msg/string.hpp"
 
 #include "rclcpp/serialization.hpp"
 #include "rclcpp/serialized_message.hpp"
@@ -13,21 +15,28 @@
 
 #include "vtr_common/timing/utils.hpp"
 #include "vtr_common/utils/filesystem.hpp"
-#include "vtr_lidar/pipeline_v2.hpp"
+#include "vtr_lidar/pipeline.hpp"
 #include "vtr_logging/logging_init.hpp"
 #include "vtr_tactic/pipelines/factory.hpp"
 #include "vtr_tactic/rviz_tactic_callback.hpp"
 #include "vtr_tactic/tactic.hpp"
+
+#include "vtr_testing_honeycomb/utils.hpp"
 
 namespace fs = std::filesystem;
 using namespace vtr;
 using namespace vtr::common;
 using namespace vtr::logging;
 using namespace vtr::tactic;
+using namespace vtr::testing;
 
 int main(int argc, char **argv) {
+  // disable eigen multi-threading
+  Eigen::setNbThreads(1);
+
   rclcpp::init(argc, argv);
-  auto node = rclcpp::Node::make_shared("navigator");
+  const std::string node_name = "honeycomb_localization_" + random_string(5);
+  auto node = rclcpp::Node::make_shared(node_name);
 
   // odometry sequence directory
   const auto odo_dir_str =
@@ -60,6 +69,15 @@ int main(int argc, char **argv) {
   CLOG(WARNING, "test") << "Odometry Directory: " << odo_dir.string();
   CLOG(WARNING, "test") << "Localization Directory: " << loc_dir.string();
   CLOG(WARNING, "test") << "Output Directory: " << data_dir.string();
+
+  std::vector<std::string> parts;
+  boost::split(parts, loc_dir_str, boost::is_any_of("/"));
+  auto stem = parts.back();
+  boost::replace_all(stem, "-", "_");
+  CLOG(WARNING, "test") << "Publishing status to topic: "
+                        << (stem + "_lidar_localization");
+  const auto status_publisher = node->create_publisher<std_msgs::msg::String>(
+      stem + "_lidar_localization", 1);
 
   // Pose graph
   auto graph = tactic::Graph::MakeShared((data_dir / "graph").string(), true);
@@ -99,11 +117,13 @@ int main(int argc, char **argv) {
   }
   CLOG(WARNING, "test") << ss.str();
 
-  tactic->setPath(sequence);
+  EdgeTransform T_loc_odo_init(true);
+  T_loc_odo_init.setCovariance(Eigen::Matrix<double, 6, 6>::Identity());
+  tactic->setPath(sequence, /* trunk sid */ 0, T_loc_odo_init, true);
 
   // Frame and transforms
   std::string robot_frame = "robot";
-  std::string lidar_frame = "honeycomb";
+  std::string lidar_frame = "lidar";
 
   /// robot lidar transformation is hard-coded - check measurements.
   Eigen::Matrix4d T_lidar_robot_mat;
@@ -119,6 +139,9 @@ int main(int argc, char **argv) {
   msg.header.frame_id = robot_frame;
   msg.child_frame_id = lidar_frame;
   tf_sbc->sendTransform(msg);
+
+  const auto clock_publisher =
+      node->create_publisher<rosgraph_msgs::msg::Clock>("/clock", 10);
 
   // Load dataset
   rosbag2_cpp::ConverterOptions converter_options;
@@ -138,23 +161,34 @@ int main(int argc, char **argv) {
 
   rclcpp::Serialization<sensor_msgs::msg::PointCloud2> serializer;
 
-  using common::timing::Stopwatch;
-  Stopwatch timer(false);
+  // thread handling variables
+  TestControl test_control(node);
 
+  // main loop
   int frame = 0;
-  int terrain_type = 0;
-  while (rclcpp::ok() && reader.has_next()) {
-    // load rosbag2 message
+  while (reader.has_next()) {
+    if (!rclcpp::ok()) break;
+    rclcpp::spin_some(node);
+    if (test_control.terminate()) break;
+    if (!test_control.play()) continue;
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(test_control.delay()));
+
+    ///
     auto bag_message = reader.read_next();
     rclcpp::SerializedMessage msg(*bag_message->serialized_data);
     auto points = std::make_shared<sensor_msgs::msg::PointCloud2>();
     serializer.deserialize_message(&msg, points.get());
+    storage::Timestamp timestamp =
+        points->header.stamp.sec * 1e9 + points->header.stamp.nanosec;
 
-    CLOG(WARNING, "test") << "Loading point cloud frame " << frame
-                          << " with timestamp "
-                          << (unsigned long)(points->header.stamp.sec * 1e9 +
-                                             points->header.stamp.nanosec);
-    timer.start();
+    CLOG(WARNING, "test") << "Loading lidar frame " << frame
+                          << " with timestamp " << timestamp;
+
+    // publish clock for sim time
+    auto time_msg = rosgraph_msgs::msg::Clock();
+    time_msg.clock = rclcpp::Time(timestamp);
+    clock_publisher->publish(time_msg);
 
     // Convert message to query_data format and store into query_data
     auto query_data = std::make_shared<lidar::LidarQueryCache>();
@@ -163,49 +197,39 @@ int main(int argc, char **argv) {
     query_data->node = node;
 
     // set timestamp
-    storage::Timestamp timestamp =
-        points->header.stamp.sec * 1e9 + points->header.stamp.nanosec;
     query_data->stamp.emplace(timestamp);
 
-    // make up some environment info
+    // make up some environment info (not important)
     tactic::EnvInfo env_info;
-    env_info.terrain_type = terrain_type;
+    env_info.terrain_type = 0;
     query_data->env_info.emplace(env_info);
 
-    // put in the pointcloud msg pointer into query data
+    // set lidar frame
     query_data->pointcloud_msg = points;
 
-    // fill in the vehicle to sensor transform and frame names
-    query_data->robot_frame.emplace(robot_frame);
+    // fill in the vehicle to sensor transform and frame name
     query_data->T_s_r.emplace(T_lidar_robot);
 
     // execute the pipeline
     tactic->input(query_data);
 
-    ++frame;
-    if ((frame % 100) == 0) {
-      ++terrain_type;
-      terrain_type %= 5;
-    };
+    std_msgs::msg::String status_msg;
+    status_msg.data = "Finished processing lidar frame " +
+                      std::to_string(frame) + " with timestamp " +
+                      std::to_string(timestamp);
+    status_publisher->publish(status_msg);
 
-    CLOG(WARNING, "test") << "Point cloud frame " << frame << " with timestamp "
-                          << (unsigned long)(points->header.stamp.sec * 1e9 +
-                                             points->header.stamp.nanosec)
-                          << " took " << timer;
-    timer.reset();
+    ++frame;
   }
 
+  rclcpp::shutdown();
+
   tactic.reset();
-
   callback.reset();
-
   pipeline.reset();
   pipeline_factory.reset();
-
   CLOG(WARNING, "test") << "Saving pose graph and reset.";
   graph->save();
   graph.reset();
   CLOG(WARNING, "test") << "Saving pose graph and reset. - DONE!";
-
-  rclcpp::shutdown();
 }

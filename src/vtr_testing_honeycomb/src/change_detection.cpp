@@ -10,9 +10,12 @@
 
 #include "vtr_common/timing/utils.hpp"
 #include "vtr_common/utils/filesystem.hpp"
-#include "vtr_lidar/pipeline_v2.hpp"
+#include "vtr_lidar/data_types/pointmap_pointer.hpp"
+#include "vtr_lidar/pipeline.hpp"
 #include "vtr_logging/logging_init.hpp"
 #include "vtr_tactic/modules/factory.hpp"
+
+#include "vtr_testing_honeycomb/utils.hpp"
 
 namespace fs = std::filesystem;
 using namespace vtr;
@@ -20,10 +23,15 @@ using namespace vtr::common;
 using namespace vtr::logging;
 using namespace vtr::tactic;
 using namespace vtr::lidar;
+using namespace vtr::testing;
 
 int main(int argc, char **argv) {
+  // disable eigen multi-threading
+  Eigen::setNbThreads(1);
+
   rclcpp::init(argc, argv);
-  auto node = rclcpp::Node::make_shared("navigator");
+  const std::string node_name = "change_detection_" + random_string(5);
+  auto node = rclcpp::Node::make_shared(node_name);
 
   // Output directory
   const auto data_dir_str =
@@ -69,7 +77,10 @@ int main(int argc, char **argv) {
   EdgeTransform T_lidar_robot(T_lidar_robot_mat);
   T_lidar_robot.setZeroCovariance();
 
-  size_t depth = 5;
+  // thread handling variables
+  TestControl test_control(node);
+
+  size_t depth = 10;
   std::queue<tactic::VertexId> ids;
 
   /// Create a temporal evaluator
@@ -78,63 +89,88 @@ int main(int argc, char **argv) {
 
   auto subgraph = graph->getSubgraph(tactic::VertexId(run_id, 0), evaluator);
   for (auto it = subgraph->begin(tactic::VertexId(run_id, 0));
-       it != subgraph->end(); ++it) {
-    const auto vertex = it->v();
-    const auto time_range = vertex->timeRange();
-    const auto scan_msgs = vertex->retrieve<PointScan<PointWithInfo>>(
-        "point_scan", "vtr_lidar_msgs/msg/PointScan", time_range.first,
-        time_range.second);
-    for (const auto &scan_msg : scan_msgs) {
-      lidar::LidarQueryCache qdata;
-      lidar::LidarOutputCache output;
-      qdata.node = node;
+       it != subgraph->end();) {
+    /// test control
+    if (!rclcpp::ok()) break;
+    rclcpp::spin_some(node);
+    if (test_control.terminate()) break;
+    if (!test_control.play()) continue;
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(test_control.delay()));
 
-      auto locked_scan_msg_ref = scan_msg->sharedLocked();  // lock the msg
-      auto &locked_scan_msg = locked_scan_msg_ref.get();
+    /// caches
+    lidar::LidarQueryCache qdata;
+    lidar::LidarOutputCache output;
 
-      // get scan timestamp
-      const auto stamp = locked_scan_msg.getTimestamp();
-      qdata.stamp.emplace(stamp);
+    qdata.node = node;
 
-      // get T_s_r
-      const auto T_s_r = T_lidar_robot;
-      qdata.T_s_r.emplace(T_lidar_robot);
+    const auto vertex_odo = it->v();
 
-      const auto &point_scan = locked_scan_msg.getData();
-      // get undistorted lidar scan
-      const auto &point_scan_data = point_scan.point_map();
-      qdata.undistorted_point_cloud.emplace(point_scan_data);
+    const auto scan_msg = vertex_odo->retrieve<PointScan<PointWithInfo>>(
+        "filtered_point_cloud", "vtr_lidar_msgs/msg/PointScan");
+    auto locked_scan_msg_ref = scan_msg->sharedLocked();  // lock the msg
+    auto &locked_scan_msg = locked_scan_msg_ref.get();
 
-      // find the privileged vertex it has been localized against
-      const auto neighbors = graph->neighbors(vertex->id());
-      VertexId loc_vid = VertexId::Invalid();
-      for (auto neighbor : neighbors) {
-        if (graph->at(EdgeId(vertex->id(), neighbor))->isSpatial()) {
-          loc_vid = neighbor;
-          break;
-        }
+    // get scan timestamp
+    const auto stamp = locked_scan_msg.getTimestamp();
+    qdata.stamp.emplace(stamp);
+
+    // get T_s_r
+    qdata.T_s_r.emplace(T_lidar_robot);
+
+    // get undistorted lidar scan
+    const auto &point_scan = locked_scan_msg.getData();
+    const auto &point_cloud = point_scan.point_cloud();
+    qdata.undistorted_point_cloud.emplace(point_cloud);
+
+    // find the privileged vertex it has been localized against
+    const auto neighbors = graph->neighbors(vertex_odo->id());
+    VertexId vid_loc = VertexId::Invalid();
+    for (auto neighbor : neighbors) {
+      if (graph->at(EdgeId(vertex_odo->id(), neighbor))->isSpatial()) {
+        vid_loc = neighbor;
+        break;
       }
-      if (!loc_vid.isValid()) continue;
-      const auto &T_ov_s = point_scan.T_vertex_map();
-      const auto &T_lv_ov = graph->at(EdgeId(loc_vid, vertex->id()))->T();
-      const auto &T_r_lv = (T_lv_ov * T_ov_s * T_s_r).inverse();
-      qdata.map_id.emplace(loc_vid);
-      qdata.map_sid.emplace(0);  /// \note: random sid since it is not used
-      qdata.T_r_m_loc.emplace(T_r_lv);
-
-      // retrieve the localization map from the vertex
-      const auto loc_vertex = graph->at(loc_vid);
-      const auto map_msg = loc_vertex->retrieve<PointMap<PointWithInfo>>(
-          "point_map", "vtr_lidar_msgs/msg/PointMap");
-      auto locked_map_msg = map_msg->sharedLocked();
-      qdata.curr_map_loc = std::make_shared<PointMap<PointWithInfo>>(
-          locked_map_msg.get().getData());
-
-      module->runAsync(qdata, output, graph, nullptr, {}, {});
-      std::this_thread::sleep_for(std::chrono::milliseconds(200));
-
-      if (!rclcpp::ok()) break;
     }
+    if (!vid_loc.isValid()) continue;
+
+    // load the map pointer
+    const auto pointmap_ptr = [&] {
+      const auto vertex_loc = graph->at(vid_loc);
+      const auto msg = vertex_loc->retrieve<PointMapPointer>(
+          "pointmap_ptr", "vtr_lidar_msgs/msg/PointMapPointer");
+      auto locked_msg = msg->sharedLocked();
+      return locked_msg.get().getData();
+    }();
+
+    auto vertex_loc_map = graph->at(pointmap_ptr.map_vid);
+    const auto map_msg = vertex_loc_map->retrieve<PointMap<PointWithInfo>>(
+        "pointmap", "vtr_lidar_msgs/msg/PointMap");
+    if (map_msg == nullptr) {
+      CLOG(ERROR, "test") << "Could not find map at vertex " << vid_loc;
+      throw std::runtime_error("Could not find map at vertex " +
+                               std::to_string(vid_loc));
+    }
+    auto locked_map_msg = map_msg->sharedLocked();
+    qdata.submap_loc = std::make_shared<PointMap<PointWithInfo>>(
+        locked_map_msg.get().getData());
+    //
+    qdata.T_v_m_loc.emplace(pointmap_ptr.T_v_this_map *
+                            qdata.submap_loc->T_vertex_this());
+
+    const auto &T_ov_s = point_scan.T_vertex_this();
+    const auto &T_lv_ov = graph->at(EdgeId(vid_loc, vertex_odo->id()))->T();
+    const auto &T_s_r = T_lidar_robot;
+    const auto &T_r_lv = (T_lv_ov * T_ov_s * T_s_r).inverse();
+    qdata.vid_loc.emplace(vid_loc);
+    qdata.sid_loc.emplace(0);  /// \note: random sid since it is not used
+    qdata.T_r_v_loc.emplace(T_r_lv);
+
+    CLOG(WARNING, "test") << "Change detection for scan at stamp: " << stamp;
+    CLOG(WARNING, "test") << "Loaded pointmap pointer with this_vid "
+                          << pointmap_ptr.this_vid << " and map_vid "
+                          << pointmap_ptr.map_vid;
+    module->runAsync(qdata, output, graph, nullptr, {}, {});
 
     // memory management
     ids.push(it->v()->id());
@@ -143,13 +179,13 @@ int main(int argc, char **argv) {
       ids.pop();
     }
 
-    if (!rclcpp::ok()) break;  // for ctrl-c
+    // increment
+    ++it;
   }
 
+  rclcpp::shutdown();
+
+  CLOG(WARNING, "test") << "Saving pose graph and reset.";
   graph->save();
   graph.reset();
-
-  LOG(WARNING) << "Map Saving done!";
-
-  rclcpp::shutdown();
 }

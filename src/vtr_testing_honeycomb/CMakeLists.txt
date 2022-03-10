@@ -38,20 +38,20 @@ ament_target_dependencies(${PROJECT_NAME}_odometry rclcpp rosbag2 rosbag2_cpp vt
 add_executable(${PROJECT_NAME}_localization src/localization.cpp)
 ament_target_dependencies(${PROJECT_NAME}_localization rclcpp rosbag2 rosbag2_cpp vtr_lidar)
 
-add_executable(${PROJECT_NAME}_localization_planning src/localization_planning.cpp)
-ament_target_dependencies(${PROJECT_NAME}_localization_planning
-  rclcpp rosbag2 rosbag2_cpp rosgraph_msgs
-  vtr_lidar vtr_path_planning
-)
+# add_executable(${PROJECT_NAME}_localization_planning src/localization_planning.cpp)
+# ament_target_dependencies(${PROJECT_NAME}_localization_planning
+#   rclcpp rosbag2 rosbag2_cpp rosgraph_msgs
+#   vtr_lidar vtr_path_planning
+# )
 
-add_executable(${PROJECT_NAME}_intra_exp_merging src/intra_exp_merging.cpp)
-ament_target_dependencies(${PROJECT_NAME}_intra_exp_merging rclcpp rosbag2 rosbag2_cpp vtr_lidar)
+# add_executable(${PROJECT_NAME}_intra_exp_merging src/intra_exp_merging.cpp)
+# ament_target_dependencies(${PROJECT_NAME}_intra_exp_merging rclcpp rosbag2 rosbag2_cpp vtr_lidar)
 
-add_executable(${PROJECT_NAME}_ground_extraction src/ground_extraction.cpp)
-ament_target_dependencies(${PROJECT_NAME}_ground_extraction rclcpp rosbag2 rosbag2_cpp vtr_lidar)
+# add_executable(${PROJECT_NAME}_ground_extraction src/ground_extraction.cpp)
+# ament_target_dependencies(${PROJECT_NAME}_ground_extraction rclcpp rosbag2 rosbag2_cpp vtr_lidar)
 
-add_executable(${PROJECT_NAME}_terrain_assessment src/terrain_assessment.cpp)
-ament_target_dependencies(${PROJECT_NAME}_terrain_assessment rclcpp rosbag2 rosbag2_cpp vtr_lidar)
+# add_executable(${PROJECT_NAME}_terrain_assessment src/terrain_assessment.cpp)
+# ament_target_dependencies(${PROJECT_NAME}_terrain_assessment rclcpp rosbag2 rosbag2_cpp vtr_lidar)
 
 add_executable(${PROJECT_NAME}_change_detection src/change_detection.cpp)
 ament_target_dependencies(${PROJECT_NAME}_change_detection rclcpp rosbag2 rosbag2_cpp vtr_lidar)
@@ -66,11 +66,11 @@ install(
     ${PROJECT_NAME}_preprocessing
     ${PROJECT_NAME}_odometry
     ${PROJECT_NAME}_localization
-    ${PROJECT_NAME}_localization_planning
-    ${PROJECT_NAME}_intra_exp_merging
+    # ${PROJECT_NAME}_localization_planning
+    # ${PROJECT_NAME}_intra_exp_merging
     ${PROJECT_NAME}_change_detection
-    ${PROJECT_NAME}_ground_extraction
-    ${PROJECT_NAME}_terrain_assessment
+    # ${PROJECT_NAME}_ground_extraction
+    # ${PROJECT_NAME}_terrain_assessment
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}

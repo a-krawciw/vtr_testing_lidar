@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
 
   // Frame and transforms
   std::string robot_frame = "robot";
-  std::string lidar_frame = "honeycomb";
+  std::string lidar_frame = "lidar";
 
   /// robot lidar transformation is hard-coded - check measurements.
   Eigen::Matrix4d T_lidar_robot_mat;
