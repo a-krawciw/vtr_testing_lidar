@@ -38,11 +38,8 @@ ament_target_dependencies(${PROJECT_NAME}_odometry rclcpp rosbag2 rosbag2_cpp vt
 add_executable(${PROJECT_NAME}_localization src/localization.cpp)
 ament_target_dependencies(${PROJECT_NAME}_localization rclcpp rosbag2 rosbag2_cpp vtr_lidar)
 
-# add_executable(${PROJECT_NAME}_localization_planning src/localization_planning.cpp)
-# ament_target_dependencies(${PROJECT_NAME}_localization_planning
-#   rclcpp rosbag2 rosbag2_cpp rosgraph_msgs
-#   vtr_lidar vtr_path_planning
-# )
+add_executable(${PROJECT_NAME}_planning src/planning.cpp)
+ament_target_dependencies(${PROJECT_NAME}_planning rclcpp rosbag2 rosbag2_cpp vtr_lidar)
 
 # add_executable(${PROJECT_NAME}_intra_exp_merging src/intra_exp_merging.cpp)
 # ament_target_dependencies(${PROJECT_NAME}_intra_exp_merging rclcpp rosbag2 rosbag2_cpp vtr_lidar)
@@ -66,7 +63,7 @@ install(
     ${PROJECT_NAME}_preprocessing
     ${PROJECT_NAME}_odometry
     ${PROJECT_NAME}_localization
-    # ${PROJECT_NAME}_localization_planning
+    ${PROJECT_NAME}_planning
     # ${PROJECT_NAME}_intra_exp_merging
     ${PROJECT_NAME}_change_detection
     # ${PROJECT_NAME}_ground_extraction

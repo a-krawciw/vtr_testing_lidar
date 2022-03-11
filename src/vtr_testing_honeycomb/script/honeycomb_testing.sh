@@ -52,12 +52,8 @@ bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_odometry.sh ${ODO_INPUT}
 # (TEST 3) Perform localization on a sequence (only run this after TEST 2)
 bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_localization.sh ${ODO_INPUT} ${LOC_INPUT}
 
-# Perform localization + planning on a sequence directly (with a specified point map version)
-ros2 run vtr_testing_honeycomb vtr_testing_honeycomb_localization_planning \
-  --ros-args -p use_sim_time:=true -r __ns:=/vtr --params-file ${VTRHROOT}/config/honeycomb.yaml \
-  -p data_dir:=${VTRHRESULT}/${ODO_INPUT}/${LOC_INPUT} \
-  -p odo_dir:=${VTRHDATA}/${ODO_INPUT} \
-  -p loc_dir:=${VTRHDATA}/${LOC_INPUT}
+# (TEST 4) Perform path planning on a sequence directly (with a specified point map version)
+bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_planning.sh ${ODO_INPUT} ${LOC_INPUT}
 
 # Perform change detection offline
 bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_change_detection.sh ${ODO_INPUT} ${LOC_INPUT}
