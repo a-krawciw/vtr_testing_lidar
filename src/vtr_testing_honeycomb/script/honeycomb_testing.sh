@@ -16,8 +16,8 @@ ros2 run rqt_reconfigure rqt_reconfigure
 ## Terminal Setup (Run Following Once)
 
 ## Define the following environment variables VTRH=VTR Honeycomb
-export VTRHROOT=/ext0/ASRL/vtr_testing_lidar
-export VTRHDATA=${VTRDATA}/utias_20211230_multiple_terrain/dome_inside
+export VTRHROOT=/home/yuchen/ASRL/vtr_testing_lidar
+export VTRHDATA=${VTRDATA}/utias_20211230_multiple_terrain/parkinglot
 export VTRHRESULT=${VTRTEMP}/testing/multienv
 mkdir -p ${VTRHRESULT}
 
