@@ -55,6 +55,9 @@ bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_localization.sh ${ODO_INP
 # (TEST 4) Perform path planning on a sequence directly (with a specified point map version)
 bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_planning.sh ${ODO_INPUT} ${LOC_INPUT}
 
+# Perform intra experience merging offline
+bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_intra_exp_merging.sh ${ODO_INPUT}
+
 # Perform change detection offline
 bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_change_detection.sh ${ODO_INPUT} ${LOC_INPUT}
 

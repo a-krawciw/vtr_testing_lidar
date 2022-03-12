@@ -29,7 +29,7 @@
         # "lidar.vertex_test",
         # "lidar.localization_map_recall",
         # "lidar.localization_icp",
-        # "lidar.intra_exp_merging",
+        "lidar.intra_exp_merging",
         # "lidar.dynamic_detection",
         # "lidar.inter_exp_merging",
         # "lidar.change_detection",
@@ -175,7 +175,7 @@
       intra_exp_merging:
         type: "lidar.intra_exp_merging_v2"
 
-        depth: 3
+        depth: 6.0
 
         map_voxel_size: 0.2
         crop_range_front: 40.0
