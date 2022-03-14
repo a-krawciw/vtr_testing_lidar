@@ -29,22 +29,56 @@
 
 #include "rviz_vtr_plugins/tools/publish_select/publish_selection_tool.hpp"
 
+#include <QKeyEvent>  // NOLINT cpplint cannot handle include order
+
 #include "rviz_common/display_context.hpp"
+#include "rviz_common/interaction/selection_manager.hpp"
+#include "rviz_common/properties/property_tree_model.hpp"
+#include "rviz_common/properties/vector_property.hpp"
 #include "rviz_common/viewport_mouse_event.hpp"
 
 namespace rviz_vtr_plugins {
 namespace tools {
 
-PublishSelectionTool::PublishSelectionTool() {
-  // rclcpp::Node::SharedPtr raw_node =
-  //     context_->getRosNodeAbstraction().lock()->get_raw_node();
-  // publisher_ =
-  //     raw_node->template create_publisher<std_msgs::msg::Int32MultiArray>(
-  //         "/selected_points", qos_profile_);
-  // clock_ = raw_node->get_clock();
-}
+PublishSelectionTool::PublishSelectionTool() = default;
 
 PublishSelectionTool::~PublishSelectionTool() = default;
+
+void PublishSelectionTool::onInitialize() {
+  Parent::onInitialize();
+  //
+  rclcpp::Node::SharedPtr raw_node =
+      context_->getRosNodeAbstraction().lock()->get_raw_node();
+  publisher_ =
+      raw_node->template create_publisher<sensor_msgs::msg::PointCloud2>(
+          "/selected_points", qos_profile_);
+  clock_ = raw_node->get_clock();
+
+  // point cloud
+  // selected_points_.header.frame_id = context_->getFixedFrame().toStdString();
+  selected_points_.header.frame_id = "unknown";
+  selected_points_.header.stamp = clock_->now();
+  selected_points_.height = 1;
+  selected_points_.point_step = 3 * 4;
+  selected_points_.is_dense = false;
+  selected_points_.is_bigendian = false;
+  selected_points_.fields.resize(3);
+
+  selected_points_.fields[0].name = "x";
+  selected_points_.fields[0].offset = 0;
+  selected_points_.fields[0].datatype = sensor_msgs::msg::PointField::FLOAT32;
+  selected_points_.fields[0].count = 1;
+
+  selected_points_.fields[1].name = "y";
+  selected_points_.fields[1].offset = 4;
+  selected_points_.fields[1].datatype = sensor_msgs::msg::PointField::FLOAT32;
+  selected_points_.fields[1].count = 1;
+
+  selected_points_.fields[2].name = "z";
+  selected_points_.fields[2].offset = 8;
+  selected_points_.fields[2].datatype = sensor_msgs::msg::PointField::FLOAT32;
+  selected_points_.fields[2].count = 1;
+}
 
 void PublishSelectionTool::activate() {
   Parent::activate();
@@ -79,9 +113,61 @@ int PublishSelectionTool::processMouseEvent(
   return flags;
 }
 
+int PublishSelectionTool::processKeyEvent(QKeyEvent *event,
+                                          rviz_common::RenderPanel *panel) {
+  //
+  int render = Parent::processKeyEvent(event, panel);
+
+  //
+  if (event->key() == Qt::Key_P) {
+    RVIZ_COMMON_LOG_INFO("Publish the selected points.");
+    publisher_->publish(selected_points_);
+  } else if (event->key() == Qt::Key_N) {
+    RVIZ_COMMON_LOG_INFO("Should proceed to the next point cloud.");
+  }
+
+  //
+  return render;
+}
+
 void PublishSelectionTool::processSelectedArea() {
   //
-  RVIZ_COMMON_LOG_INFO("This should be logged.");
+  auto selection_manager = context_->getSelectionManager();
+  auto *model = selection_manager->getPropertyModel();
+
+  //
+  const int num_rows = model->rowCount();
+  std::vector<int> point_rows;
+  for (int i = 0; i < num_rows; ++i) {
+    const auto *prop = model->getProp(model->index(i, 0));
+    if (prop->getName().startsWith("Point")) point_rows.emplace_back(i);
+  }
+  RVIZ_COMMON_LOG_INFO_STREAM(
+      "Number of selected points: " << point_rows.size());
+
+  selected_points_.data.resize(point_rows.size() * selected_points_.point_step);
+
+  for (int i = 0; i < (int)point_rows.size(); ++i) {
+    const auto &row = point_rows[i];
+    const auto *prop = model->getProp(model->index(row, 0));
+    //
+    auto *subprop = dynamic_cast<rviz_common::properties::VectorProperty *>(
+        prop->childAt(0));
+    if (!subprop) throw std::runtime_error("selected point property is null");
+
+    auto point_data = subprop->getVector();
+    uint8_t *data_pointer =
+        &selected_points_.data[0] + i * selected_points_.point_step;
+    *(float *)data_pointer = point_data.x;
+    data_pointer += 4;
+    *(float *)data_pointer = point_data.y;
+    data_pointer += 4;
+    *(float *)data_pointer = point_data.z;
+  }
+
+  selected_points_.row_step = point_rows.size() * selected_points_.point_step;
+  selected_points_.width = point_rows.size();
+  selected_points_.header.stamp = clock_->now();
 }
 
 }  // namespace tools
