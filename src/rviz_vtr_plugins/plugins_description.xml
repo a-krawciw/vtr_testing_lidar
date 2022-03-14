@@ -1,0 +1,15 @@
+<library path="rviz_vtr_plugins">
+
+  <class
+    name="rviz_vtr_plugins/PublishSelect"
+    type="rviz_vtr_plugins::tools::PublishSelectionTool"
+    base_class_type="rviz_common::Tool"
+  >
+    <description>
+      Drag with the left button to select objects in the 3D scene.
+      Hold the Alt key to change viewpoint as in the Move tool.
+      Press P to publish the selected Points.
+    </description>
+  </class>
+
+</library>
