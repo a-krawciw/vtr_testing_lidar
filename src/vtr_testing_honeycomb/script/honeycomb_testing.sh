@@ -2,7 +2,8 @@ echo "This script contains instructions to run all tests, do not run this script
 exit 1
 
 ## First launch RViz for visualization
-source /opt/ros/galactic/setup.bash                   # source the ROS environment
+source /opt/ros/galactic/setup.bash # source the ROS environment
+source /home/yuchen/ASRL/vtr_testing_lidar/install/setup.bash
 ros2 run rviz2 rviz2 -d ${VTRSRC}/rviz/honeycomb.rviz # launch rviz
 
 ## Then in another terminal, launch rqt_reconfigure for control
@@ -60,6 +61,9 @@ bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_intra_exp_merging.sh ${OD
 
 # Perform change detection offline
 bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_change_detection.sh ${ODO_INPUT} ${LOC_INPUT}
+
+# Perform map annotation
+bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_map_annotation.sh ${ODO_INPUT}
 
 # Perform offline tasks
 ros2 run vtr_testing_honeycomb vtr_testing_honeycomb_intra_exp_merging \

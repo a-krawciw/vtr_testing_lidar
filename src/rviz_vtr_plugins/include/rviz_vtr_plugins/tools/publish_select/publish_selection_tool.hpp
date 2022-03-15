@@ -3,6 +3,7 @@
 #include "rclcpp/qos.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
+#include "std_msgs/msg/int32.hpp"
 
 #include "rviz_default_plugins/tools/select/selection_tool.hpp"
 
@@ -29,11 +30,13 @@ class PublishSelectionTool : public rviz_default_plugins::tools::SelectionTool {
 
  protected:
   rclcpp::QoS qos_profile_{5};
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pc_publisher_;
+  rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr cmd_publisher_;
   rclcpp::Clock::SharedPtr clock_;
 
  private:
   bool selecting_ = false;
+  std_msgs::msg::Int32 command_;
   sensor_msgs::msg::PointCloud2 selected_points_;
 };
 

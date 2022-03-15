@@ -26,6 +26,7 @@ find_package(rclcpp REQUIRED)
 find_package(rviz_default_plugins REQUIRED)
 
 find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 
 set(rviz_vtr_plugins_source_files
   src/rviz_vtr_plugins/tools/publish_select/publish_selection_tool.cpp
@@ -63,6 +64,7 @@ ament_target_dependencies(rviz_vtr_plugins
   rviz_rendering
   rviz_default_plugins
   sensor_msgs
+  std_msgs
 )
 
 # Export old-style CMake variables
@@ -77,6 +79,7 @@ ament_export_dependencies(
   rviz_ogre_vendor
   rviz_default_plugins
   sensor_msgs
+  std_msgs
 )
 
 install(

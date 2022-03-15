@@ -49,9 +49,11 @@ void PublishSelectionTool::onInitialize() {
   //
   rclcpp::Node::SharedPtr raw_node =
       context_->getRosNodeAbstraction().lock()->get_raw_node();
-  publisher_ =
+  pc_publisher_ =
       raw_node->template create_publisher<sensor_msgs::msg::PointCloud2>(
           "/selected_points", qos_profile_);
+  cmd_publisher_ = raw_node->template create_publisher<std_msgs::msg::Int32>(
+      "/selection_command", qos_profile_);
   clock_ = raw_node->get_clock();
 
   // point cloud
@@ -121,9 +123,27 @@ int PublishSelectionTool::processKeyEvent(QKeyEvent *event,
   //
   if (event->key() == Qt::Key_P) {
     RVIZ_COMMON_LOG_INFO("Publish the selected points.");
-    publisher_->publish(selected_points_);
+    pc_publisher_->publish(selected_points_);
+  } else if (event->key() == Qt::Key_C) {
+    RVIZ_COMMON_LOG_INFO("Should clear the point cloud.");
+    command_.data = -2;  /// cancel the selection
+    cmd_publisher_->publish(command_);
   } else if (event->key() == Qt::Key_N) {
     RVIZ_COMMON_LOG_INFO("Should proceed to the next point cloud.");
+    command_.data = -1;  /// proceed to the next point cloud
+    cmd_publisher_->publish(command_);
+  } else if (event->key() == Qt::Key_0) {
+    RVIZ_COMMON_LOG_INFO("Switch to annotate points with type 0");
+    command_.data = 0;
+    cmd_publisher_->publish(command_);
+  } else if (event->key() == Qt::Key_1) {
+    RVIZ_COMMON_LOG_INFO("Switch to annotate points with type 1");
+    command_.data = 1;
+    cmd_publisher_->publish(command_);
+  } else if (event->key() == Qt::Key_2) {
+    RVIZ_COMMON_LOG_INFO("Switch to annotate points with type 2");
+    command_.data = 2;
+    cmd_publisher_->publish(command_);
   }
 
   //

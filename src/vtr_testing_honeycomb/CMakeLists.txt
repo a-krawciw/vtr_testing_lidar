@@ -13,6 +13,8 @@ find_package(rosbag2 REQUIRED)
 find_package(rosbag2_cpp REQUIRED)
 
 find_package(rosgraph_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 
 find_package(vtr_common REQUIRED)
 find_package(vtr_logging REQUIRED)
@@ -53,6 +55,9 @@ ament_target_dependencies(${PROJECT_NAME}_intra_exp_merging rclcpp rosbag2 rosba
 add_executable(${PROJECT_NAME}_change_detection src/change_detection.cpp)
 ament_target_dependencies(${PROJECT_NAME}_change_detection rclcpp rosbag2 rosbag2_cpp vtr_lidar)
 
+add_executable(${PROJECT_NAME}_map_annotation src/map_annotation.cpp)
+ament_target_dependencies(${PROJECT_NAME}_map_annotation rclcpp rosbag2 rosbag2_cpp sensor_msgs std_msgs vtr_lidar)
+
 install(
   DIRECTORY include/
   DESTINATION include
@@ -66,6 +71,7 @@ install(
     ${PROJECT_NAME}_planning
     ${PROJECT_NAME}_intra_exp_merging
     ${PROJECT_NAME}_change_detection
+    ${PROJECT_NAME}_map_annotation
     # ${PROJECT_NAME}_ground_extraction
     # ${PROJECT_NAME}_terrain_assessment
   LIBRARY DESTINATION lib
