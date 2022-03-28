@@ -62,14 +62,13 @@ bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_intra_exp_merging.sh ${OD
 # Perform change detection offline
 bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_change_detection.sh ${ODO_INPUT} ${LOC_INPUT}
 
+# Perform change detection offline with fake data
+bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_change_detection_fake.sh ${ODO_INPUT} ${LOC_INPUT}
+
 # Perform map annotation
 bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_map_annotation.sh ${ODO_INPUT}
 
 # Perform offline tasks
-ros2 run vtr_testing_honeycomb vtr_testing_honeycomb_intra_exp_merging \
-  --ros-args -r __ns:=/vtr --params-file ${VTRHROOT}/config/honeycomb.yaml \
-  -p data_dir:=${VTRHRESULT}/${ODO_INPUT}/${ODO_INPUT}
-
 ros2 run vtr_testing_honeycomb vtr_testing_honeycomb_dynamic_detection \
   --ros-args -r __ns:=/vtr --params-file ${VTRHROOT}/config/honeycomb.yaml \
   -p data_dir:=${VTRHRESULT}/${ODO_INPUT}/${ODO_INPUT}
@@ -81,13 +80,3 @@ ros2 run vtr_testing_honeycomb vtr_testing_honeycomb_inter_exp_merging \
 ros2 run vtr_testing_honeycomb vtr_testing_honeycomb_terrain_assessment \
   --ros-args -r __ns:=/vtr --params-file ${VTRHROOT}/config/honeycomb.yaml \
   -p data_dir:=${VTRHRESULT}/${ODO_INPUT}/${ODO_INPUT}
-
-ros2 run vtr_testing_honeycomb vtr_testing_honeycomb_intra_exp_merging \
-  --ros-args -r __ns:=/vtr --params-file ${VTRHROOT}/config/honeycomb.yaml \
-  -p data_dir:=${VTRHRESULT}/${ODO_INPUT}/${LOC_INPUT} \
-  -p run_id:=1
-
-ros2 run vtr_testing_honeycomb vtr_testing_honeycomb_change_detection \
-  --ros-args -r __ns:=/vtr --params-file ${VTRHROOT}/config/honeycomb.yaml \
-  -p data_dir:=${VTRHRESULT}/${ODO_INPUT}/${LOC_INPUT} \
-  -p run_id:=1

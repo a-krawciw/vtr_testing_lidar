@@ -254,6 +254,7 @@
       change_detection:
         type: "lidar.change_detection_v2"
         # change detection
+        detection_range: 15.0
         search_radius: 0.25
         # cost map
         resolution: 0.5
@@ -320,7 +321,7 @@
         run_async: true
         visualize: true
 
-    ############ tactic configuration ############
+    ############ path planning configuration ############
     path_planning:
       type: teb
       control_period: 100 # ms

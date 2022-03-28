@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <random>
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -6,11 +7,13 @@
 #include <tf2_eigen/tf2_eigen.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 
+// #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "std_msgs/msg/bool.hpp"
 
 #include "vtr_common/timing/utils.hpp"
 #include "vtr_common/utils/filesystem.hpp"
 #include "vtr_lidar/data_types/pointmap_pointer.hpp"
+#include "vtr_lidar/mesh2pcd/mesh2pcd.hpp"
 #include "vtr_lidar/pipeline.hpp"
 #include "vtr_logging/logging_init.hpp"
 #include "vtr_tactic/modules/factory.hpp"
@@ -30,7 +33,7 @@ int main(int argc, char **argv) {
   Eigen::setNbThreads(1);
 
   rclcpp::init(argc, argv);
-  const std::string node_name = "change_detection_" + random_string(5);
+  const std::string node_name = "change_detection_fake_" + random_string(5);
   auto node = rclcpp::Node::make_shared(node_name);
 
   // Output directory
@@ -64,6 +67,10 @@ int main(int argc, char **argv) {
   // Parameters
   const unsigned run_id = node->declare_parameter<int>("run_id", 1);
 
+  // // Temp publishers
+  // const auto pcd_pub = node->create_publisher<sensor_msgs::msg::PointCloud2>(
+  //     "fake_pcd", rclcpp::QoS(10));
+
   // Pose graph
   auto graph = tactic::Graph::MakeShared((data_dir / "graph").string(), true);
 
@@ -76,6 +83,70 @@ int main(int argc, char **argv) {
   T_lidar_robot_mat << 1, 0, 0, -0.06, 0, 1, 0, 0, 0, 0, 1, -1.45, 0, 0, 0, 1;
   EdgeTransform T_lidar_robot(T_lidar_robot_mat);
   T_lidar_robot.setZeroCovariance();
+
+  // mesh2pcd converter
+  std::vector<mesh2pcd::Mesh2PcdConverter> converters;
+
+  mesh2pcd::Mesh2PcdConverter::Config m2p_config;
+  m2p_config.theta_min = 1.204;
+  m2p_config.theta_res = 0.013;
+  m2p_config.theta_max = 2.862;
+  m2p_config.phi_min = -1.833;
+  m2p_config.phi_max = 1.833;
+  m2p_config.phi_res = 0.021;
+  m2p_config.range_min = 2.0;
+  m2p_config.range_max = 40.0;
+
+  // clang-format off
+  const std::string param_prefix = "fake_object";
+  const auto path = node->declare_parameter<std::string>(param_prefix + ".path", std::string{});
+  const auto objs = node->declare_parameter<std::vector<std::string>>(param_prefix + ".objs", std::vector<std::string>{});
+  for (const auto &obj : objs) {
+    const std::string filename = path + "/" + obj + ".obj";
+    CLOG(WARNING, "test") << "Loading obj file: " << filename;
+    converters.emplace_back(filename, m2p_config);
+  }
+
+  // fake object at fixed locations
+  const auto fixed_types = node->declare_parameter<std::vector<long int>>(param_prefix + ".types", std::vector<long int>{});
+  const auto fixed_xs = node->declare_parameter<std::vector<double>>(param_prefix + ".xs", std::vector<double>{});
+  const auto fixed_ys = node->declare_parameter<std::vector<double>>(param_prefix + ".ys", std::vector<double>{});
+  const auto fixed_zs = node->declare_parameter<std::vector<double>>(param_prefix + ".zs", std::vector<double>{});
+  const auto fixed_rolls = node->declare_parameter<std::vector<double>>(param_prefix + ".rolls", std::vector<double>{});
+  const auto fixed_pitchs = node->declare_parameter<std::vector<double>>(param_prefix + ".pitchs", std::vector<double>{});
+  const auto fixed_yaws = node->declare_parameter<std::vector<double>>(param_prefix + ".yaws", std::vector<double>{});
+
+  const auto rand_objs = node->declare_parameter<int>(param_prefix + ".rand_objs", 0);
+  const auto rand_xrange = node->declare_parameter<std::vector<double>>(param_prefix + ".rand_xrange", std::vector<double>{});
+  const auto rand_yrange = node->declare_parameter<std::vector<double>>(param_prefix + ".rand_yrange", std::vector<double>{});
+  const auto rand_zrange = node->declare_parameter<std::vector<double>>(param_prefix + ".rand_zrange", std::vector<double>{});
+
+  auto genFakeObj = [&] {
+    std::vector<std::pair<size_t, Eigen::Matrix4f>> obj_T_vtx_objs;
+    // populate fake objects at fixed locations
+    const auto num_fixed_objs = fixed_types.size();
+    for (size_t i = 0; i < num_fixed_objs; ++i) {
+      Eigen::Matrix<double, 6, 1> T_vtx_obj_vec;
+      T_vtx_obj_vec << fixed_xs.at(i), fixed_ys.at(i), fixed_zs.at(i), fixed_rolls.at(i), fixed_pitchs.at(i), fixed_yaws.at(i);
+      const auto T_vtx_obj = lgmath::se3::vec2tran(T_vtx_obj_vec);
+      obj_T_vtx_objs.emplace_back(fixed_types.at(i), T_vtx_obj.cast<float>());
+    }
+    // populate fake objects at random locations
+    std::random_device rd;  //Will be used to obtain a seed for the random number engine
+    std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+    std::uniform_int_distribution<> typedist(0, objs.size() - 1);
+    std::uniform_real_distribution<> xdist(rand_xrange.at(0), rand_xrange.at(1));
+    std::uniform_real_distribution<> ydist(rand_yrange.at(0), rand_yrange.at(1));
+    std::uniform_real_distribution<> zdist(rand_zrange.at(0), rand_zrange.at(1));
+    for (size_t i = 0; i < (size_t)rand_objs; ++i) {
+      Eigen::Matrix<double, 6, 1> T_vtx_obj_vec;
+      T_vtx_obj_vec << xdist(gen), ydist(gen), zdist(gen), 0, 0, 0;
+      const auto T_vtx_obj = lgmath::se3::vec2tran(T_vtx_obj_vec);
+      obj_T_vtx_objs.emplace_back(typedist(gen), T_vtx_obj.cast<float>());
+    }
+    return obj_T_vtx_objs;
+  };
+  // clang-format on
 
   // thread handling variables
   TestControl test_control(node);
@@ -165,9 +236,24 @@ int main(int argc, char **argv) {
     qdata.sid_loc.emplace(0);  /// \note: random sid since it is not used
     qdata.T_r_v_loc.emplace(T_r_lv);
 
-    //
-    const auto &point_cloud = point_scan.point_cloud();
+    // add fake object to point cloud
+    auto point_cloud = point_scan.point_cloud();
+    const auto obj_T_vtx_objs = genFakeObj();
+    for (size_t i = 0; i < obj_T_vtx_objs.size(); ++i) {
+      const auto &obj = obj_T_vtx_objs.at(i).first;
+      const auto &T_vtx_obj = obj_T_vtx_objs.at(i).second;
+      const auto T_s_obj = T_s_r.matrix().cast<float>() *
+                           T_r_lv.matrix().cast<float>() *
+                           T_lv_m.matrix().cast<float>() * T_vtx_obj;
+      converters.at(obj).addToPcd(point_cloud, T_s_obj, i == 0);
+    }
     qdata.undistorted_point_cloud.emplace(point_cloud);
+
+    // sensor_msgs::msg::PointCloud2 pc2_msg;
+    // pcl::toROSMsg(point_cloud, pc2_msg);
+    // pc2_msg.header.frame_id = "lidar";
+    // pc2_msg.header.stamp = rclcpp::Time(stamp);
+    // pcd_pub->publish(pc2_msg);
 
     CLOG(WARNING, "test") << "Change detection for scan at stamp: " << stamp;
     CLOG(WARNING, "test") << "Loaded pointmap pointer with this_vid "
