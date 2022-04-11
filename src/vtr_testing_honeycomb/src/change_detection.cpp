@@ -121,13 +121,18 @@ int main(int argc, char **argv) {
     // get undistorted lidar scan
     const auto &point_scan = locked_scan_msg.getData();
 
-    // find the privileged vertex it has been localized against
-    const auto neighbors = graph->neighbors(vertex_odo->id());
     VertexId vid_loc = VertexId::Invalid();
-    for (auto neighbor : neighbors) {
-      if (graph->at(EdgeId(vertex_odo->id(), neighbor))->isSpatial()) {
-        vid_loc = neighbor;
-        break;
+    if (run_id == 0) {
+      // special case for the teach run
+      vid_loc = vertex_odo->id();
+    } else {
+      // find the privileged vertex it has been localized against
+      const auto neighbors = graph->neighbors(vertex_odo->id());
+      for (auto neighbor : neighbors) {
+        if (graph->at(EdgeId(vertex_odo->id(), neighbor))->isSpatial()) {
+          vid_loc = neighbor;
+          break;
+        }
       }
     }
     if (!vid_loc.isValid()) continue;
@@ -158,7 +163,9 @@ int main(int argc, char **argv) {
     qdata.T_v_m_loc.emplace(T_lv_m);
 
     const auto &T_ov_s = point_scan.T_vertex_this();
-    const auto &T_lv_ov = graph->at(EdgeId(vid_loc, vertex_odo->id()))->T();
+    const auto &T_lv_ov =
+        run_id == 0 ? EdgeTransform(true)
+                    : graph->at(EdgeId(vid_loc, vertex_odo->id()))->T();
     const auto &T_s_r = T_lidar_robot;
     const auto T_r_lv = (T_lv_ov * T_ov_s * T_s_r).inverse();
     qdata.vid_loc.emplace(vid_loc);

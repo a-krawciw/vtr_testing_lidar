@@ -60,10 +60,10 @@ bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_planning.sh ${ODO_INPUT} 
 bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_intra_exp_merging.sh ${ODO_INPUT}
 
 # Perform change detection offline
-bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_change_detection.sh ${ODO_INPUT} ${LOC_INPUT}
+bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_change_detection.sh ${ODO_INPUT} ${LOC_INPUT} 1
 
 # Perform change detection offline with fake data
-bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_change_detection_fake.sh ${ODO_INPUT} ${LOC_INPUT}
+bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_change_detection_fake.sh ${ODO_INPUT} ${LOC_INPUT} 1
 
 # Perform map annotation
 bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_map_annotation.sh ${ODO_INPUT}
