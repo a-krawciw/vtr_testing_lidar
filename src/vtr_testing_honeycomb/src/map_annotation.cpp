@@ -8,8 +8,10 @@
 
 #include "vtr_common/timing/utils.hpp"
 #include "vtr_common/utils/filesystem.hpp"
+#include "vtr_lidar/data_types/point.hpp"
 #include "vtr_lidar/data_types/pointmap.hpp"
 #include "vtr_lidar/data_types/pointmap_pointer.hpp"
+#include "vtr_lidar/utils/nanoflann_utils.hpp"
 #include "vtr_logging/logging_init.hpp"
 #include "vtr_tactic/types.hpp"
 

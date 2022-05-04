@@ -132,9 +132,16 @@
       icp:
         type: lidar.odometry_icp
 
-        # motion prior terms
-        trajectory_smoothing: true
-        qc_diagonal: [1.0, 0.1, 0.1, 0.1, 0.1, 1.0]
+        # continuous time estimation
+        use_trajectory_estimation: true
+        traj_num_extra_states: 0
+        traj_lock_prev_pose: false
+        traj_lock_prev_vel: false
+        traj_qc_inv: [1.0, 0.1, 0.1, 0.1, 0.1, 1.0]
+
+        use_radial_velocity: false
+        rv_cov: 1.0
+        rv_loss_threshold: 1.0
 
         # ICP parameters
         num_threads: 6
@@ -159,6 +166,7 @@
         type: lidar.odometry_map_maintenance
 
         map_voxel_size: 0.1
+
         crop_range_front: 40.0
         back_over_front_ratio: 0.5
 
