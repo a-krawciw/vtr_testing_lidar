@@ -192,7 +192,8 @@
 
         depth: 6.0
 
-        map_voxel_size: 0.1
+        map_voxel_size: 0.2
+
         crop_range_front: 40.0
         back_over_front_ratio: 0.5
 
@@ -201,10 +202,10 @@
       dynamic_detection:
         type: "lidar.dynamic_detection"
 
-        depth: 6.0
+        depth: 12.0
 
-        horizontal_resolution: 0.02042
-        vertical_resolution: 0.01326
+        horizontal_resolution: 0.041 # 0.02042
+        vertical_resolution: 0.026 # 0.01326
         max_num_observations: 2000
         min_num_observations: 4
         dynamic_threshold: 0.3
@@ -212,16 +213,16 @@
         visualize: true
 
       inter_exp_merging:
-        type: "lidar.inter_exp_merging"
-        depth: 2
+        type: "lidar.inter_exp_merging_v2"
 
-        horizontal_resolution: 0.02042
-        vertical_resolution: 0.01326
-        max_num_observations: 2000
-        min_num_observations: 4
-        dynamic_threshold: 0.3
-
+        map_voxel_size: 0.2
         max_num_experiences: 128
+
+        distance_threshold: 0.6
+        planar_threshold: 0.2
+        normal_threshold: 0.8
+
+        dynamic_obs_threshold: 1
 
         visualize: true
 

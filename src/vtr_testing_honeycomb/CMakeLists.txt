@@ -49,6 +49,9 @@ ament_target_dependencies(${PROJECT_NAME}_intra_exp_merging rclcpp rosbag2 rosba
 add_executable(${PROJECT_NAME}_dynamic_detection src/dynamic_detection.cpp)
 ament_target_dependencies(${PROJECT_NAME}_dynamic_detection rclcpp rosbag2 rosbag2_cpp vtr_lidar)
 
+add_executable(${PROJECT_NAME}_inter_exp_merging src/inter_exp_merging.cpp)
+ament_target_dependencies(${PROJECT_NAME}_inter_exp_merging rclcpp rosbag2 rosbag2_cpp vtr_lidar)
+
 # add_executable(${PROJECT_NAME}_ground_extraction src/ground_extraction.cpp)
 # ament_target_dependencies(${PROJECT_NAME}_ground_extraction rclcpp rosbag2 rosbag2_cpp vtr_lidar)
 
@@ -64,6 +67,12 @@ ament_target_dependencies(${PROJECT_NAME}_change_detection_fake rclcpp rosbag2 r
 add_executable(${PROJECT_NAME}_map_annotation src/map_annotation.cpp)
 ament_target_dependencies(${PROJECT_NAME}_map_annotation rclcpp rosbag2 rosbag2_cpp sensor_msgs std_msgs vtr_lidar)
 
+add_executable(${PROJECT_NAME}_plot_map_maintenance src/plot_map_maintenance.cpp)
+ament_target_dependencies(${PROJECT_NAME}_plot_map_maintenance rclcpp rosbag2 rosbag2_cpp vtr_lidar)
+
+add_executable(${PROJECT_NAME}_plot_memap_maintenance src/plot_memap_maintenance.cpp)
+ament_target_dependencies(${PROJECT_NAME}_plot_memap_maintenance rclcpp rosbag2 rosbag2_cpp vtr_lidar)
+
 install(
   DIRECTORY include/
   DESTINATION include
@@ -77,11 +86,14 @@ install(
     ${PROJECT_NAME}_planning
     ${PROJECT_NAME}_intra_exp_merging
     ${PROJECT_NAME}_dynamic_detection
+    ${PROJECT_NAME}_inter_exp_merging
     ${PROJECT_NAME}_change_detection
     ${PROJECT_NAME}_change_detection_fake
     ${PROJECT_NAME}_map_annotation
     # ${PROJECT_NAME}_ground_extraction
     # ${PROJECT_NAME}_terrain_assessment
+    ${PROJECT_NAME}_plot_map_maintenance
+    ${PROJECT_NAME}_plot_memap_maintenance
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}

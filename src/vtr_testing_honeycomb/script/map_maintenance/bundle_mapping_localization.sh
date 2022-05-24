@@ -15,29 +15,32 @@ ODO_INPUT=rosbag2_2021_08_23-09_25_37
 NUM_FRAMES=1700
 
 LOC_INPUTS=(
-  # rosbag2_2021_08_23-09_57_54
+  ## First set of runs
   rosbag2_2021_08_23-10_26_27
-  # rosbag2_2021_08_23-10_55_40
-  # rosbag2_2021_08_23-11_21_12
   rosbag2_2021_08_23-11_29_30
-  # rosbag2_2021_08_23-11_58_52
   rosbag2_2021_08_23-12_58_58
   rosbag2_2021_08_23-13_29_07
   rosbag2_2021_08_23-14_28_57
-  # rosbag2_2021_08_23-14_58_51
   rosbag2_2021_08_23-15_29_05
-  # rosbag2_2021_08_23-15_59_26
   rosbag2_2021_08_23-16_30_52
   rosbag2_2021_08_23-16_59_14
   rosbag2_2021_08_23-17_58_24
-  # rosbag2_2021_08_23-18_30_31
   rosbag2_2021_08_23-18_56_46
-  # rosbag2_2021_08_25-19_04_35
-  # rosbag2_2021_08_25-19_31_44
-  # rosbag2_2021_08_25-19_57_09
-  # rosbag2_2021_08_25-20_15_07
-  # rosbag2_2021_08_25-20_31_50
-  # rosbag2_2021_08_25-20_56_58
+  ## Second set of runs
+  rosbag2_2021_08_23-09_57_54
+  rosbag2_2021_08_23-10_55_40
+  rosbag2_2021_08_23-11_21_12
+  rosbag2_2021_08_23-11_58_52
+  rosbag2_2021_08_23-14_58_51
+  rosbag2_2021_08_23-15_59_26
+  rosbag2_2021_08_23-18_30_31
+  ## Third set of runs
+  rosbag2_2021_08_25-19_04_35
+  rosbag2_2021_08_25-19_31_44
+  rosbag2_2021_08_25-19_57_09
+  rosbag2_2021_08_25-20_15_07
+  rosbag2_2021_08_25-20_31_50
+  rosbag2_2021_08_25-20_56_58
   ## The following two are not used in the paper
   # rosbag2_2021_08_23-12_27_23 # odometry bad, end location different
   # rosbag2_2021_08_23-13_58_45 # odometry bad, end location different

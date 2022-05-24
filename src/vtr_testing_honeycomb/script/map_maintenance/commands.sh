@@ -42,6 +42,15 @@ bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/map_maintenance/odometry.sh ${
 bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_localization.sh ${ODO_INPUT} ${LOC_INPUT}
 
 # (TEST 4) Intra Exp Merging
+MODULE=intra_exp_merging
 RUN_ID=0
-bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/map_maintenance/intra_exp_merging.sh ${RUN_ID}
-bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/map_maintenance/dynamic_detection.sh ${RUN_ID}
+bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/map_maintenance/map_maintenance.sh ${MODULE} ${RUN_ID}
+
+# bundled version
+MODULE=intra_exp_merging && bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/map_maintenance/bundle_map_maintenance.sh ${MODULE}
+MODULE=dynamic_detection && bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/map_maintenance/bundle_map_maintenance.sh ${MODULE}
+MODULE=inter_exp_merging && bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/map_maintenance/bundle_map_maintenance.sh ${MODULE}
+
+# plot global map
+bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/map_maintenance/plot_map_maintenance.sh
+bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/map_maintenance/plot_memap_maintenance.sh

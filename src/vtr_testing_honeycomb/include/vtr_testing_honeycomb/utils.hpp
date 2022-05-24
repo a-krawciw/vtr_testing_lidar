@@ -20,7 +20,8 @@ std::string random_string(std::size_t length) {
 }
 
 struct TestControl {
-  TestControl(const rclcpp::Node::SharedPtr &node) {
+  TestControl(const rclcpp::Node::SharedPtr &node, const int delay = 0)
+      : delay_(delay) {
     // parameters to control the playback
     // clang-format off
     play_ = node->declare_parameter<bool>("control_test.play", play_);
