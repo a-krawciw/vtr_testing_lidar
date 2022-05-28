@@ -39,7 +39,7 @@ bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_preprocessing.sh ${ODO_IN
 # (TEST 2) Perform odometry on a sequence
 bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/map_maintenance/odometry.sh ${ODO_INPUT} ${NUM_FRAMES}
 # (TEST 3) Perform localization on a sequence (only run this after TEST 2)
-bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/test_localization.sh ${ODO_INPUT} ${LOC_INPUT}
+bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/map_maintenance/localization.sh ${ODO_INPUT} ${LOC_INPUT}
 
 # (TEST 4) Intra Exp Merging
 MODULE=intra_exp_merging

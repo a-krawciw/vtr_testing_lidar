@@ -2,6 +2,8 @@
 
 #include "rclcpp/rclcpp.hpp"
 
+#include "nav_msgs/msg/path.hpp"
+
 #include "vtr_common/timing/utils.hpp"
 #include "vtr_common/utils/filesystem.hpp"
 #include "vtr_lidar/data_types/multi_exp_pointmap.hpp"
@@ -48,6 +50,7 @@ int main(int argc, char **argv) {
   configureLogging(log_filename, log_debug, log_enabled);
 
   //
+  auto global_path_pub = node->create_publisher<nav_msgs::msg::Path>("global_path", 5);
   auto global_map_pub = node->create_publisher<sensor_msgs::msg::PointCloud2>("global_map", 5);
 
   // Pose graph
@@ -59,12 +62,19 @@ int main(int argc, char **argv) {
   auto subgraph = graph->getSubgraph(priv_vid, evaluator);
 
   /// global map for visualization
+  std::vector<Eigen::Matrix4d> T_priv_currs;
   PointMap<PointWithInfo> global_map(/* voxel size */ 0.2);
   pose_graph::PoseCache<GraphBase> pose_cache(subgraph, priv_vid);
 
   for (auto it = subgraph->begin(priv_vid); it != subgraph->end(); ++it) {
     const auto curr_vertex = it->v();
     const auto curr_vid = it->v()->id();
+
+
+    // store the privileged path in global frame
+    {
+      T_priv_currs.emplace_back(pose_cache.T_root_query(curr_vid).matrix());
+    }
 
     // check if we have a map for this vertex
     {
@@ -121,8 +131,8 @@ int main(int argc, char **argv) {
     graph->at(curr_vid)->unload();
   }
 
-#if true
-  /// \note uncomment this to remove short-term obstacles
+#if false
+  /// \note uncomment this to remove short-term obstacles (hardcoded for parking lot only)
   auto filter_cb = [](PointWithInfo &query_pt) {
     return bool(query_pt.multi_exp_obs > 18);
   };
@@ -132,7 +142,17 @@ int main(int argc, char **argv) {
   /// publish the global map
   while (true) {
     if (!rclcpp::ok()) break;
-    CLOG(WARNING, "test") << "Publishing global map.";
+    CLOG(WARNING, "test") << "Publishing global path and map.";
+
+    nav_msgs::msg::Path path_msg;
+    path_msg.header.frame_id = "world";
+    auto& poses = path_msg.poses;
+    for (auto &T_priv_curr: T_priv_currs) {
+      auto& pose = poses.emplace_back();
+      pose.pose = tf2::toMsg(Eigen::Affine3d(T_priv_curr));
+    }
+    global_path_pub->publish(path_msg);
+
     sensor_msgs::msg::PointCloud2 pc2_msg;
     pcl::toROSMsg(global_map.point_cloud(), pc2_msg);
     pc2_msg.header.frame_id = "world";
