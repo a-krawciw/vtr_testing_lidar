@@ -375,7 +375,8 @@
     ############ custom objects ############
     fake_object:
       path: "/home/yuchen/Desktop/3dmodels"
-      objs: ["cone", "box", "cylinder"]
+      # objs: ["human", "cone", "box_small", "box_large", "car"]
+      objs: ["human", "cone", "box_small", "box_large"]
       # fixed
       # types:  [     0,      0,     1]
       # xs:     [   5.0,    8.0,   5.0]
@@ -385,7 +386,7 @@
       # pitchs: [   0.0,    0.0,   0.0]
       # yaws:   [   0.0,    0.0,   0.0]
       # random
-      rand_objs: 15
-      rand_xrange: [-10.0, 10.0]
-      rand_yrange: [-10.0, 10.0]
-      rand_zrange: [-0.4, 0.0]
+      rand_objs: 20
+      rand_xrange: [-0.0, 10.0]
+      rand_yrange: [-5.0, 5.0]
+      rand_zrange: [-0.5, -0.1]

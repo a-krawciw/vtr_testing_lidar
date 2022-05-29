@@ -130,7 +130,6 @@ def main(data_dir_base, dest):
       query, centroid, normal, result = get_result_from_msg(msg)
       # valid distance and roughness
       filter = np.logical_and.reduce((result[:, 0] >= 0, result[:, 1] > 0, centroid[:, 2] < 0.0))
-      # filter = np.logical_and.reduce((result[:, 0] >= 0, result[:, 1] > 0))
       # apply filtering
       ftd_query = query[filter]
       ftd_centroid = centroid[filter]

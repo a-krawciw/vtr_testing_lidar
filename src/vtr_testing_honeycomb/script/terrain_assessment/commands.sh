@@ -14,7 +14,7 @@ ros2 run rqt_reconfigure rqt_reconfigure
 #### Now start another terminal and run testing scripts ####
 
 ## changes to the configs:
-# 1. map_voxel_size set to 0.1
+# 1. map_voxel_size in config file set to 0.1 - so that we get better estimate of normals
 
 ## Terminal Setup (Run Following Once)
 
@@ -99,15 +99,25 @@ bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/map_maintenance/plot_map_maint
 bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/map_maintenance/plot_memap_maintenance.sh
 
 # Run terrain assessment
+# remember to set number of fake obstacles and types of obstacles in the config file, for now we use:
+#   objs: ["human", "cone", "box_small", "box_large"]
+#   rand_objs: 20
+#   rand_xrange: [-0.0, 10.0]
+#   rand_yrange: [-5.0, 5.0]
+#   rand_zrange: [-0.5, -0.1]
 MODULE=change_detection_fake
 RUN_ID=0
 bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/terrain_assessment/terrain_assessment.sh ${MODULE} ${RUN_ID}
-
 
 # Plot terrain assessment
 export VTRHROOT=/home/yuchen/ASRL/vtr_testing_lidar
 source ${VTRHROOT}/install/setup.bash
 source /home/yuchen/ASRL/venv/bin/activate
+# this needs results without obstacles (assume folder named main.no_fake_obstacle)
 python /ext0/ASRL/vtr_testing_lidar/scripts/plot_terrain_roughness_slope.py \
   --path /home/yuchen/ASRL/temp/testing/utias_multiple_terrain \
-  --dest /home/yuchen/ASRL/notes/UTIAS-Master-Thesis/figs/ch4
+  --dest /ext0/ASRL/vtr_testing_lidar/scripts/results
+# this needs results with obstacles (assume folder named main.fake_obstacle)
+python /ext0/ASRL/vtr_testing_lidar/scripts/plot_terrain_assessment_pr.py \
+  --path /home/yuchen/ASRL/temp/testing/utias_multiple_terrain \
+  --dest /ext0/ASRL/vtr_testing_lidar/scripts/results

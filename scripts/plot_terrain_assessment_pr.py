@@ -5,7 +5,7 @@ import numpy as np
 import numpy.linalg as npla
 import csv
 import matplotlib.pyplot as plt
-
+from multiprocessing import Pool
 from scipy import spatial
 
 plt.rcParams.update({
@@ -27,6 +27,21 @@ from rclpy.serialization import deserialize_message
 import ros2_numpy
 from pylgmath import se3op
 
+def setup_figure(row, col, height, width, l=0.0, r=0.0, b=0.0, t=0.0, w=0.0, h=0.0):
+  tot_height = row * height
+  tot_width = col * width
+  # axes spacing
+  tot_height = tot_height + (height * h) * (row - 1)
+  tot_width = tot_width + (width * w) * (col - 1)
+  # left right padding
+  tot_height = tot_height / (1 - (b + t))
+  tot_width = tot_width / (1 - (l + r))
+
+  fig, axs = plt.subplots(row, col, figsize=(tot_width, tot_height))
+  fig.subplots_adjust(left=l, right=1.0-r, bottom=b, top=1.0-t)
+  fig.subplots_adjust(wspace=w, hspace=h)
+  print(f"Figure size (width, height): {fig.get_size_inches()}")
+  return fig, axs
 
 class BagFileParser():
 
@@ -113,22 +128,6 @@ def find_neighbors(query, support_radius=0.25):
   neighbors = kdtree.query_ball_point(query, support_radius)
   return neighbors
 
-def setup_figure(row, col, height, width, l=0.0, r=0.0, b=0.0, t=0.0, w=0.0, h=0.0):
-  tot_height = row * height
-  tot_width = col * width
-  # axes spacing
-  tot_height = tot_height + (height * h) * (row - 1)
-  tot_width = tot_width + (width * w) * (col - 1)
-  # left right padding
-  tot_height = tot_height / (1 - (b + t))
-  tot_width = tot_width / (1 - (l + r))
-
-  fig, axs = plt.subplots(row, col, figsize=(tot_width, tot_height))
-  fig.subplots_adjust(left=l, right=1.0-r, bottom=b, top=1.0-t)
-  fig.subplots_adjust(wspace=w, hspace=h)
-  print(f"Figure size (width, height): {fig.get_size_inches()}")
-  return fig, axs
-
 def support_filter(threshold, query, cost, neighbors, support_threshold, support_variance):
   query_indices = np.arange(query.shape[0])
 
@@ -181,15 +180,91 @@ def plot_precision_recall(ax, cost, ground_truth,
 
   return thresholds
 
+
+PREDICTION_FUNC = None
+GROUND_TRUTH = None
+def global_compute_pr(threshold):
+  global GROUND_TRUTH, PREDICTION_FUNC
+  prediction_func = PREDICTION_FUNC
+  ground_truth = GROUND_TRUTH
+  prediction = prediction_func(threshold)
+  TP = np.sum(np.logical_and(prediction, ground_truth))
+  TN = np.sum(np.logical_and(np.logical_not(prediction), np.logical_not(ground_truth)))
+  FP = np.sum(np.logical_and(prediction, np.logical_not(ground_truth)))
+  FN = np.sum(np.logical_and(np.logical_not(prediction), ground_truth))
+  if ((TP + FP) > 0) and ((TP + FN) > 0):
+    print(f"{threshold:>10.2f} TP:{TP:>10} TN:{TN:>10} FP:{FP:>10} FN:{FN:>10}, P:{TP / (TP + FP):>10.2f}, R:{TP / (TP + FN):>10.2f}")
+    # precisions.append(TP / (TP + FP))
+    # recalls.append(TP / (TP + FN))
+    precision = TP / (TP + FP)
+    recall = TP / (TP + FN)
+    return (precision, recall)
+  else:
+    print(f"{threshold:>10.2f} TP:{TP:>10} TN:{TN:>10} FP:{FP:>10} FN:{FN:>10}, P:{0:>10.2f}, R:{0:>10.2f}")
+    return None, None
+
+def plot_precision_recall_multiproc(ax, cost, ground_truth, prediction_func=None,
+                                    thresholds=None, color=None, label=None, save=None):
+  if thresholds is None:
+    sorted_cost = np.sort(cost)
+    thresholds = [sorted_cost[0]-1.0] + [sorted_cost[i] for i in range(0, len(sorted_cost), int(len(sorted_cost) / 50))] + [sorted_cost[-1]]
+
+  if save is not None and osp.exists(save):
+    print("Loading results from file")
+    result = np.loadtxt(save)
+    recalls = result[:, 0]
+    precisions = result[:, 1]
+    ax.plot(recalls, precisions, color=color, label=label)
+    return thresholds
+  else:
+    precisions, recalls = [], []
+    global PREDICTION_FUNC, GROUND_TRUTH
+    PREDICTION_FUNC = prediction_func
+    GROUND_TRUTH = ground_truth
+    with Pool(4) as p:
+      result = p.map(global_compute_pr, thresholds)
+
+    for (p, r) in result:
+      if p is not None and r is not None:
+        precisions.append(p)
+        recalls.append(r)
+
+    ax.plot(recalls, precisions, color=color, label=label)
+    if save is not None:
+      np.savetxt(save, np.stack((np.array(recalls), np.array(precisions)), axis=1), fmt="%.4f")
+
+  return thresholds
+
+FILTERED_QUERIES = None
+FILTERED_NEIGHBORS = None
+SUPPORT_THRESHOLD = None
+SUPPORT_VARIANCE = None
+def global_get_label_base(threshold, costs):
+  global FILTERED_QUERIES, FILTERED_NEIGHBORS
+  queries = FILTERED_QUERIES
+  neighbors = FILTERED_NEIGHBORS
+
+  labels = []
+  for i in range(len(queries)):
+    labels.append(support_filter(threshold, queries[i], costs[i], neighbors[i], SUPPORT_THRESHOLD, SUPPORT_VARIANCE))
+  return np.concatenate(labels, axis=0)
+
+FILTERED_COSTS = None
+def global_get_label(threshold):
+  return global_get_label_base(threshold, FILTERED_COSTS)
+
+FILTERED_COSTS_PR = None
+def global_get_label_pr(threshold):
+  return global_get_label_base(threshold, FILTERED_COSTS_PR)
+
 ## NOTE: this is plotted from not including any ground truth points
 def main(data_dir_base, dest):
   fig, axs = setup_figure(1, 3, 1.2, 1.2, l=0.12, r=0.05, b=0.35, t=0.1, w=0.5, h=0.25)
 
   rows = ['parkinglot', 'marsdome', 'grove']
-
   for i, row in enumerate(rows):
     ## load data
-    data_dir = osp.join(osp.normpath(data_dir_base), row, "main/graph/data")
+    data_dir = osp.join(osp.normpath(data_dir_base), row, "main.fake_obstacle/graph/data")
     print(f"Row {i} corresponds to {row} with data in {data_dir}")
     data_name = "change_detection_v2_result"
     data_file = f"{data_dir}/{data_name}/{data_name}_0.db3"
@@ -206,12 +281,18 @@ def main(data_dir_base, dest):
     filtered_rougnhesses_pr = []
     filtered_costs_pr = []
     filtered_neighbors = []
+
+    num_data = 0
     for time, msg in data_iter:
+      num_data += 1
+      # NOTE: use 450 frames for evaluation only (for now)
+      if num_data >= 450:
+        break
+
       #
       query, centroid, normal, result = get_result_from_msg(msg)
       # valid distance and roughness
       filter = np.logical_and.reduce((result[:, 0] >= 0, result[:, 1] > 0))
-      # filter = np.logical_and.reduce((result[:, 0] >= 0, result[:, 1] > 0))
       # apply filtering
       ftd_query = query[filter]
       ftd_centroid = centroid[filter]
@@ -232,11 +313,12 @@ def main(data_dir_base, dest):
       filtered_rougnhesses_pr.append(ftd_roughness_pr)
       filtered_costs_pr.append(ftd_cost_pr)
       filtered_neighbors.append(ftd_neighbors)
+    print(f"Loaded {num_data} data points")
 
-
+    # local versions
     def get_label_base(threshold, costs,
         support_threshold = 2.5,
-        support_variance = 0.1,
+        support_variance = 0.05,
         queries = filtered_queries,
         neighbors = filtered_neighbors):
       labels = []
@@ -245,6 +327,16 @@ def main(data_dir_base, dest):
       return np.concatenate(labels, axis=0)
     get_label = lambda threshold, *args, costs = filtered_costs, **kwargs: get_label_base(threshold, costs, **kwargs)
     get_label_pr = lambda threshold, *args, costs = filtered_costs_pr, **kwargs: get_label_base(threshold, costs, **kwargs)
+
+    # for global versions
+    global FILTERED_QUERIES, FILTERED_NEIGHBORS, FILTERED_COSTS, FILTERED_COSTS_PR, SUPPORT_THRESHOLD, SUPPORT_VARIANCE
+    SUPPORT_THRESHOLD = 2.5
+    SUPPORT_VARIANCE = 0.05
+    FILTERED_QUERIES = filtered_queries
+    FILTERED_NEIGHBORS = filtered_neighbors
+    FILTERED_COSTS = filtered_costs
+    FILTERED_COSTS_PR = filtered_costs_pr
+
 
     filtered_results = np.concatenate(filtered_results, axis=0)
     filtered_centroids = np.concatenate(filtered_centroids, axis=0)
@@ -264,28 +356,30 @@ def main(data_dir_base, dest):
     print("Likelihood")
     result_txt = osp.join(dest, 'pr_curves' , row, 'no_prior_no_filtering.txt')
     thresholds = plot_precision_recall(ax, filtered_costs, filtered_results[:, 3]>0.5, color='r', label="No Prior \& No Filtering", save=result_txt)
-    downsampled_thresholds = thresholds[:1]
-    for th in thresholds[1:]:
-      if np.abs(th - downsampled_thresholds[-1]) > 0.1:
-        downsampled_thresholds.append(th)
+    # downsampled_thresholds = thresholds[:1]
+    # for th in thresholds[1:]:
+    #   if np.abs(th - downsampled_thresholds[-1]) > 0.1:
+    #     downsampled_thresholds.append(th)
+    downsampled_thresholds = thresholds
 
     print("Likelihood + Filtering")
     result_txt = osp.join(dest, 'pr_curves' , row, 'no_prior.txt')
-    # plot_precision_recall(ax, filtered_costs, filtered_results[:, 3]>0.5, color='g', thresholds=thresholds, label="No Prior", save=result_txt) # TODO: replace with the following
-    plot_precision_recall(ax, filtered_costs, filtered_results[:, 3]>0.5, get_label, downsampled_thresholds, color='g', label="No Prior", save=result_txt)
+    # plot_precision_recall(ax, filtered_costs, filtered_results[:, 3]>0.5, get_label, downsampled_thresholds, color='g', label="No Prior", save=result_txt)
+    plot_precision_recall_multiproc(ax, filtered_costs, filtered_results[:, 3]>0.5, global_get_label, downsampled_thresholds, color='g', label="No Prior", save=result_txt)
 
     print("Posterior Predictive")
     result_txt = osp.join(dest, 'pr_curves' , row, 'no_filtering.txt')
-    thresholds = plot_precision_recall(ax, filtered_costs_pr, filtered_results[:, 3]>0.5, color='b', label="No Prior", save=result_txt)
-    downsampled_thresholds = thresholds[:1]
-    for th in thresholds[1:]:
-      if np.abs(th - downsampled_thresholds[-1]) > 0.1:
-        downsampled_thresholds.append(th)
+    thresholds = plot_precision_recall(ax, filtered_costs_pr, filtered_results[:, 3]>0.5, color='b', label="No Filtering", save=result_txt)
+    # downsampled_thresholds = thresholds[:1]
+    # for th in thresholds[1:]:
+    #   if np.abs(th - downsampled_thresholds[-1]) > 0.1:
+    #     downsampled_thresholds.append(th)
+    downsampled_thresholds = thresholds
 
     print("Posterior Predictive + Filtering")
     result_txt = osp.join(dest, 'pr_curves' , row, 'proposed.txt')
-    # plot_precision_recall(ax, filtered_costs_pr, filtered_results[:, 3]>0.5, color='m', thresholds=thresholds, label="Proposed", save=result_txt) # TODO: replace with the following
-    plot_precision_recall(ax, filtered_costs_pr, filtered_results[:, 3]>0.5, get_label_pr, downsampled_thresholds, color='m', label="Proposed", save=result_txt)
+    # plot_precision_recall(ax, filtered_costs_pr, filtered_results[:, 3]>0.5, get_label_pr, downsampled_thresholds, color='m', label="Proposed", save=result_txt)
+    plot_precision_recall_multiproc(ax, filtered_costs_pr, filtered_results[:, 3]>0.5, global_get_label_pr, downsampled_thresholds, color='m', label="Proposed", save=result_txt)
 
     axs[i].set_axisbelow(True)
     axs[i].grid(which='both', linestyle='--', alpha=0.75)
