@@ -7,7 +7,7 @@
 #include <tf2_eigen/tf2_eigen.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 
-// #include "sensor_msgs/msg/point_cloud2.hpp"
+#include "sensor_msgs/msg/point_cloud2.hpp"
 #include "std_msgs/msg/bool.hpp"
 
 #include "vtr_common/timing/utils.hpp"
@@ -28,6 +28,7 @@ using namespace vtr::tactic;
 using namespace vtr::lidar;
 using namespace vtr::testing;
 
+// clang-format off
 int main(int argc, char **argv) {
   // disable eigen multi-threading
   Eigen::setNbThreads(1);
@@ -67,9 +68,8 @@ int main(int argc, char **argv) {
   // Parameters
   const unsigned run_id = node->declare_parameter<int>("run_id", 1);
 
-  // // Temp publishers
-  // const auto pcd_pub = node->create_publisher<sensor_msgs::msg::PointCloud2>(
-  //     "fake_pcd", rclcpp::QoS(10));
+  // Publisher
+  const auto fake_pcd_pub = node->create_publisher<sensor_msgs::msg::PointCloud2>("change_detection_fake_pcd", rclcpp::QoS(10));
 
   // Pose graph
   auto graph = tactic::Graph::MakeShared((data_dir / "graph").string(), true);
@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
   m2p_config.range_min = 2.0;
   m2p_config.range_max = 40.0;
 
-  // clang-format off
+  // clang-format
   const std::string param_prefix = "fake_object";
   const auto path = node->declare_parameter<std::string>(param_prefix + ".path", std::string{});
   const auto objs = node->declare_parameter<std::vector<std::string>>(param_prefix + ".objs", std::vector<std::string>{});
@@ -121,6 +121,10 @@ int main(int argc, char **argv) {
   const auto rand_yrange = node->declare_parameter<std::vector<double>>(param_prefix + ".rand_yrange", std::vector<double>{});
   const auto rand_zrange = node->declare_parameter<std::vector<double>>(param_prefix + ".rand_zrange", std::vector<double>{});
 
+  // random object generator
+  std::random_device rd;  //Will be used to obtain a seed for the random number engine
+  std::mt19937 gen(/* rd() */ 0); //Standard mersenne_twister_engine seeded with rd()
+
   auto genFakeObj = [&] {
     std::vector<std::pair<size_t, Eigen::Matrix4f>> obj_T_vtx_objs;
     // populate fake objects at fixed locations
@@ -132,8 +136,6 @@ int main(int argc, char **argv) {
       obj_T_vtx_objs.emplace_back(fixed_types.at(i), T_vtx_obj.cast<float>());
     }
     // populate fake objects at random locations
-    std::random_device rd;  //Will be used to obtain a seed for the random number engine
-    std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
     std::uniform_int_distribution<> typedist(0, objs.size() - 1);
     std::uniform_real_distribution<> xdist(rand_xrange.at(0), rand_xrange.at(1));
     std::uniform_real_distribution<> ydist(rand_yrange.at(0), rand_yrange.at(1));
@@ -146,7 +148,7 @@ int main(int argc, char **argv) {
     }
     return obj_T_vtx_objs;
   };
-  // clang-format on
+  // clang-format
 
   // thread handling variables
   TestControl test_control(node);
@@ -155,19 +157,16 @@ int main(int argc, char **argv) {
   std::queue<tactic::VertexId> ids;
 
   /// Create a temporal evaluator
-  auto evaluator =
-      std::make_shared<tactic::TemporalEvaluator<tactic::GraphBase>>(*graph);
+  auto evaluator = std::make_shared<tactic::TemporalEvaluator<tactic::GraphBase>>(*graph);
 
   auto subgraph = graph->getSubgraph(tactic::VertexId(run_id, 0), evaluator);
-  for (auto it = subgraph->begin(tactic::VertexId(run_id, 0));
-       it != subgraph->end();) {
+  for (auto it = subgraph->begin(tactic::VertexId(run_id, 0)); it != subgraph->end();) {
     /// test control
     if (!rclcpp::ok()) break;
     rclcpp::spin_some(node);
     if (test_control.terminate()) break;
     if (!test_control.play()) continue;
-    std::this_thread::sleep_for(
-        std::chrono::milliseconds(test_control.delay()));
+    std::this_thread::sleep_for(std::chrono::milliseconds(test_control.delay()));
 
     /// caches
     lidar::LidarQueryCache qdata;
@@ -177,8 +176,7 @@ int main(int argc, char **argv) {
 
     const auto vertex_odo = it->v();
 
-    const auto scan_msg = vertex_odo->retrieve<PointScan<PointWithInfo>>(
-        "filtered_point_cloud", "vtr_lidar_msgs/msg/PointScan");
+    const auto scan_msg = vertex_odo->retrieve<PointScan<PointWithInfo>>("filtered_point_cloud", "vtr_lidar_msgs/msg/PointScan");
     auto locked_scan_msg_ref = scan_msg->sharedLocked();  // lock the msg
     auto &locked_scan_msg = locked_scan_msg_ref.get();
 
@@ -211,32 +209,24 @@ int main(int argc, char **argv) {
     // load the map pointer
     const auto pointmap_ptr = [&] {
       const auto vertex_loc = graph->at(vid_loc);
-      const auto msg = vertex_loc->retrieve<PointMapPointer>(
-          "pointmap_ptr", "vtr_lidar_msgs/msg/PointMapPointer");
-      auto locked_msg = msg->sharedLocked();
-      return locked_msg.get().getData();
+      const auto msg = vertex_loc->retrieve<PointMapPointer>("pointmap_ptr", "vtr_lidar_msgs/msg/PointMapPointer");
+      return msg->sharedLocked().get().getData();
     }();
 
     auto vertex_loc_map = graph->at(pointmap_ptr.map_vid);
-    const auto map_msg = vertex_loc_map->retrieve<PointMap<PointWithInfo>>(
-        "pointmap", "vtr_lidar_msgs/msg/PointMap");
+    const auto map_msg = vertex_loc_map->retrieve<PointMap<PointWithInfo>>("pointmap", "vtr_lidar_msgs/msg/PointMap");
     if (map_msg == nullptr) {
       CLOG(ERROR, "test") << "Could not find map at vertex " << vid_loc;
-      throw std::runtime_error("Could not find map at vertex " +
-                               std::to_string(vid_loc));
+      throw std::runtime_error("Could not find map at vertex " + std::to_string(vid_loc));
     }
     auto locked_map_msg = map_msg->sharedLocked();
-    qdata.submap_loc = std::make_shared<PointMap<PointWithInfo>>(
-        locked_map_msg.get().getData());
+    qdata.submap_loc = std::make_shared<PointMap<PointWithInfo>>(locked_map_msg.get().getData());
     //
-    const auto T_lv_m =
-        pointmap_ptr.T_v_this_map * qdata.submap_loc->T_vertex_this();
+    const auto T_lv_m = pointmap_ptr.T_v_this_map * qdata.submap_loc->T_vertex_this();
     qdata.T_v_m_loc.emplace(T_lv_m);
 
     const auto &T_ov_s = point_scan.T_vertex_this();
-    const auto &T_lv_ov =
-        run_id == 0 ? EdgeTransform(true)
-                    : graph->at(EdgeId(vid_loc, vertex_odo->id()))->T();
+    const auto &T_lv_ov = run_id == 0 ? EdgeTransform(true) : graph->at(EdgeId(vid_loc, vertex_odo->id()))->T();
     const auto &T_s_r = T_lidar_robot;
     const auto T_r_lv = (T_lv_ov * T_ov_s * T_s_r).inverse();
     qdata.vid_loc.emplace(vid_loc);
@@ -249,25 +239,26 @@ int main(int argc, char **argv) {
     for (size_t i = 0; i < obj_T_vtx_objs.size(); ++i) {
       const auto &obj = obj_T_vtx_objs.at(i).first;
       const auto &T_vtx_obj = obj_T_vtx_objs.at(i).second;
-      const auto T_s_obj = T_s_r.matrix().cast<float>() *
-                           T_r_lv.matrix().cast<float>() *
-                           T_lv_m.matrix().cast<float>() * T_vtx_obj;
+      const auto T_s_obj = (T_s_r * T_r_lv * T_lv_m).matrix().cast<float>() * T_vtx_obj;
       converters.at(obj).addToPcd(point_cloud, T_s_obj, i == 0);
     }
     qdata.undistorted_point_cloud.emplace(point_cloud);
 
-    // sensor_msgs::msg::PointCloud2 pc2_msg;
-    // pcl::toROSMsg(point_cloud, pc2_msg);
-    // pc2_msg.header.frame_id = "lidar";
-    // pc2_msg.header.stamp = rclcpp::Time(stamp);
-    // pcd_pub->publish(pc2_msg);
+    {
+      sensor_msgs::msg::PointCloud2 pc2_msg;
+      pcl::toROSMsg(point_cloud, pc2_msg);
+      pc2_msg.header.frame_id = "world";
+      // pc2_msg.header.stamp = rclcpp::Time(stamp);
+      fake_pcd_pub->publish(pc2_msg);
+    }
 
     CLOG(WARNING, "test") << "Change detection for scan at stamp: " << stamp;
     CLOG(WARNING, "test") << "Loaded pointmap pointer with this_vid "
                           << pointmap_ptr.this_vid << " and map_vid "
                           << pointmap_ptr.map_vid;
+#if true
     module->runAsync(qdata, output, graph, nullptr, {}, {});
-
+#endif
     // memory management
     ids.push(it->v()->id());
     if (ids.size() > depth) {

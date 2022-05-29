@@ -52,9 +52,9 @@ LOC_INPUTS=(
   # rosbag2_2022_01_30-22_38_28  # localization fails for this run do not use it
 )
 
-# glove
-export VTRHDATA=${VTRHDATABASE}/glove
-export VTRHRESULT=${VTRHRESULTBASE}/glove
+# grove
+export VTRHDATA=${VTRHDATABASE}/grove
+export VTRHRESULT=${VTRHRESULTBASE}/grove
 mkdir -p ${VTRHRESULT}
 NUM_FRAMES=10000
 ODO_INPUT=rosbag2_2021_12_30-14_31_27
@@ -97,3 +97,17 @@ done
 # Plot global map
 bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/map_maintenance/plot_map_maintenance.sh
 bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/map_maintenance/plot_memap_maintenance.sh
+
+# Run terrain assessment
+MODULE=change_detection_fake
+RUN_ID=0
+bash ${VTRHROOT}/src/vtr_testing_honeycomb/script/terrain_assessment/terrain_assessment.sh ${MODULE} ${RUN_ID}
+
+
+# Plot terrain assessment
+export VTRHROOT=/home/yuchen/ASRL/vtr_testing_lidar
+source ${VTRHROOT}/install/setup.bash
+source /home/yuchen/ASRL/venv/bin/activate
+python /ext0/ASRL/vtr_testing_lidar/scripts/plot_terrain_roughness_slope.py \
+  --path /home/yuchen/ASRL/temp/testing/utias_multiple_terrain \
+  --dest /home/yuchen/ASRL/notes/UTIAS-Master-Thesis/figs/ch4
