@@ -304,7 +304,7 @@ def main(data_dir_base, dest):
       query, centroid, normal, result = get_result_from_msg(msg)
       # valid distance and roughness
       filter = np.logical_and.reduce((result[:, 0] >= 0, result[:, 1] > 0))
-      # apply filtering
+      # apply filter
       ftd_query = query[filter]
       ftd_centroid = centroid[filter]
       ftd_normal = normal[filter]
@@ -365,29 +365,29 @@ def main(data_dir_base, dest):
 
     # precision recall curve
     print("Likelihood")
-    result_txt = osp.join(dest, 'pr_curves' , row, 'no_prior_no_filtering.txt')
-    thresholds = plot_precision_recall(ax, filtered_costs, filtered_results[:, 3]>0.5, color='r', label="No Prior \& Filtering", save=result_txt)
+    result_txt = osp.join(dest, 'pr_curves' , row, 'no_prior_no_filter.txt')
+    thresholds = plot_precision_recall(ax, filtered_costs, filtered_results[:, 3]>0.5, color='r', label="No Prior \& Filter", save=result_txt)
     # downsampled_thresholds = thresholds[:1]
     # for th in thresholds[1:]:
     #   if np.abs(th - downsampled_thresholds[-1]) > 0.1:
     #     downsampled_thresholds.append(th)
     downsampled_thresholds = thresholds
 
-    print("Likelihood + Filtering")
+    print("Likelihood + Filter")
     result_txt = osp.join(dest, 'pr_curves' , row, 'no_prior.txt')
     # plot_precision_recall(ax, filtered_costs, filtered_results[:, 3]>0.5, get_label, downsampled_thresholds, color='g', label="No Prior", save=result_txt)
     plot_precision_recall_multiproc(ax, filtered_costs, filtered_results[:, 3]>0.5, global_get_label, downsampled_thresholds, color='g', label="No Prior", save=result_txt)
 
     print("Posterior Predictive")
-    result_txt = osp.join(dest, 'pr_curves' , row, 'no_filtering.txt')
-    thresholds = plot_precision_recall(ax, filtered_costs_pr, filtered_results[:, 3]>0.5, color='b', label="No Filtering", save=result_txt)
+    result_txt = osp.join(dest, 'pr_curves' , row, 'no_filter.txt')
+    thresholds = plot_precision_recall(ax, filtered_costs_pr, filtered_results[:, 3]>0.5, color='b', label="No Filter", save=result_txt)
     # downsampled_thresholds = thresholds[:1]
     # for th in thresholds[1:]:
     #   if np.abs(th - downsampled_thresholds[-1]) > 0.1:
     #     downsampled_thresholds.append(th)
     downsampled_thresholds = thresholds
 
-    print("Posterior Predictive + Filtering")
+    print("Posterior Predictive + Filter")
     result_txt = osp.join(dest, 'pr_curves' , row, 'proposed.txt')
     # plot_precision_recall(ax, filtered_costs_pr, filtered_results[:, 3]>0.5, get_label_pr, downsampled_thresholds, color='m', label="Proposed", save=result_txt)
     plot_precision_recall_multiproc(ax, filtered_costs_pr, filtered_results[:, 3]>0.5, global_get_label_pr, downsampled_thresholds, color='m', label="Proposed", save=result_txt)
