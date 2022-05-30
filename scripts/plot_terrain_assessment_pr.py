@@ -159,7 +159,11 @@ def plot_precision_recall(ax, cost, ground_truth,
     result = np.loadtxt(save)
     recalls = result[:, 0]
     precisions = result[:, 1]
+    f_scores = result[:, 2]
     ax.plot(recalls, precisions, color=color, label=label)
+    #
+    argmax = np.argmax(f_scores)
+    print(f"precision, recall, fscore: {precisions[argmax]:.4f} & {recalls[argmax]:.4f} & {f_scores[argmax]:.4f}")    
     return thresholds
   else:
     precisions, recalls, f_scores = [], [], []
@@ -216,7 +220,11 @@ def plot_precision_recall_multiproc(ax, cost, ground_truth, prediction_func=None
     result = np.loadtxt(save)
     recalls = result[:, 0]
     precisions = result[:, 1]
+    f_scores = result[:, 2]
     ax.plot(recalls, precisions, color=color, label=label)
+    #
+    argmax = np.argmax(f_scores)
+    print(f"precision, recall, fscore: {precisions[argmax]:.4f} & {recalls[argmax]:.4f} & {f_scores[argmax]:.4f}")
     return thresholds
   else:
     precisions, recalls, f_scores = [], [], []
