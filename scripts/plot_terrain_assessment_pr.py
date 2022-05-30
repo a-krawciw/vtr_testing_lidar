@@ -162,7 +162,7 @@ def plot_precision_recall(ax, cost, ground_truth,
     ax.plot(recalls, precisions, color=color, label=label)
     return thresholds
   else:
-    precisions, recalls = [], []
+    precisions, recalls, f_scores = [], [], []
     for threshold in thresholds:
       prediction = prediction_func(threshold, cost)
       TP = np.sum(np.logical_and(prediction, ground_truth))
@@ -173,11 +173,12 @@ def plot_precision_recall(ax, cost, ground_truth,
         print(f"{threshold:>10.2f} TP:{TP:>10} TN:{TN:>10} FP:{FP:>10} FN:{FN:>10}, P:{TP / (TP + FP):>10.2f}, R:{TP / (TP + FN):>10.2f}")
         precisions.append(TP / (TP + FP))
         recalls.append(TP / (TP + FN))
+        f_scores.append(2 * precisions[-1] * recalls[-1] / (precisions[-1] + recalls[-1]))
       else:
         print(f"{threshold:>10.2f} TP:{TP:>10} TN:{TN:>10} FP:{FP:>10} FN:{FN:>10}, P:{0:>10.2f}, R:{0:>10.2f}")
     ax.plot(recalls, precisions, color=color, label=label)
     if save is not None:
-      np.savetxt(save, np.stack((np.array(recalls), np.array(precisions)), axis=1), fmt="%.4f")
+      np.savetxt(save, np.stack((np.array(recalls), np.array(precisions), np.array(f_scores)), axis=1), fmt="%.4f")
 
   return thresholds
 
@@ -218,7 +219,7 @@ def plot_precision_recall_multiproc(ax, cost, ground_truth, prediction_func=None
     ax.plot(recalls, precisions, color=color, label=label)
     return thresholds
   else:
-    precisions, recalls = [], []
+    precisions, recalls, f_scores = [], [], []
     global PREDICTION_FUNC, GROUND_TRUTH
     PREDICTION_FUNC = prediction_func
     GROUND_TRUTH = ground_truth
@@ -229,10 +230,11 @@ def plot_precision_recall_multiproc(ax, cost, ground_truth, prediction_func=None
       if p is not None and r is not None:
         precisions.append(p)
         recalls.append(r)
+        f_scores.append(2 * precisions[-1] * recalls[-1] / (precisions[-1] + recalls[-1]))
 
     ax.plot(recalls, precisions, color=color, label=label)
     if save is not None:
-      np.savetxt(save, np.stack((np.array(recalls), np.array(precisions)), axis=1), fmt="%.4f")
+      np.savetxt(save, np.stack((np.array(recalls), np.array(precisions), np.array(f_scores)), axis=1), fmt="%.4f")
 
   return thresholds
 
