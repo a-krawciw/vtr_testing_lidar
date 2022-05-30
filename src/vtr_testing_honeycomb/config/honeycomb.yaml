@@ -271,15 +271,18 @@
       change_detection:
         type: "lidar.change_detection_v2"
         # change detection
-        detection_range: 15.0
+        detection_range: 10.0
         search_radius: 0.25
 
-        alpha0: 2.0
-        beta0: 0.2
-        negprob_threshold: 0.04
+        negprob_threshold: 0.015 # -1.86 without prior, 0.015 with prior
 
+        use_prior: true
+        alpha0: 3.0 #  6 / 2  (6 pseudo observations)
+        beta0: 0.03 #  0.01 * 6 / 2 (6 pseudo observations of variance 0.01)
+
+        use_support_filtering: true
         support_radius: 0.25
-        support_variance: 0.1
+        support_variance: 0.05
         support_threshold: 2.5
 
         # cost map
@@ -375,17 +378,17 @@
     ############ custom objects ############
     fake_object:
       path: "/home/yuchen/Desktop/3dmodels"
-      # objs: ["human", "cone", "box_small", "box_large", "car"]
-      objs: ["human", "cone", "box_small", "box_large"]
       # fixed
-      # types:  [     0,      0,     1]
-      # xs:     [   5.0,    8.0,   5.0]
-      # ys:     [   1.0,   -1.0,  -2.0]
-      # zs:     [  -0.3,   -0.3,  -0.3]
-      # rolls:  [   0.0,    0.0,   0.0]
-      # pitchs: [   0.0,    0.0,   0.0]
-      # yaws:   [   0.0,    0.0,   0.0]
+      # objs: ["car", "cone", "human", "box_small"]
+      # types:  [   0,       0,     1,    1,     2,     3,     2,     2,     2]
+      # xs:     [ 6.5,    -1.5,   3.5,  1.5,   5.5,   5.5,   2.5,   5.0,   8.0]
+      # ys:     [ 0.0,   -12.0,  -5.0, -5.5,   0.0,   0.5,  -2.5,  -2.0,   2.0]
+      # zs:     [-0.2,    -0.2,  -0.2, -0.2,  -0.2,  -0.2,  -0.2,  -0.3,  -0.3]
+      # rolls:  [ 0.0,     0.0,   0.0,  0.0,   0.0,   0.0,   0.0,   0.0,   0.0]
+      # pitchs: [ 0.0,     0.0,   0.0,  0.0,   0.0,   0.0,   0.0,   0.0,   0.0]
+      # yaws:   [ 1.95,   1.95,   0.0,  0.0,   0.0,   0.0,   0.0,   0.0,   0.0]
       # random
+      objs: ["human", "cone", "box_small", "box_large"]
       rand_objs: 20
       rand_xrange: [-0.0, 10.0]
       rand_yrange: [-5.0, 5.0]

@@ -64,6 +64,9 @@ ament_target_dependencies(${PROJECT_NAME}_change_detection rclcpp rosbag2 rosbag
 add_executable(${PROJECT_NAME}_change_detection_fake src/change_detection_fake.cpp)
 ament_target_dependencies(${PROJECT_NAME}_change_detection_fake rclcpp rosbag2 rosbag2_cpp sensor_msgs std_msgs vtr_lidar)
 
+add_executable(${PROJECT_NAME}_change_detection_fake_one_frame src/change_detection_fake_one_frame.cpp)
+ament_target_dependencies(${PROJECT_NAME}_change_detection_fake_one_frame rclcpp rosbag2 rosbag2_cpp sensor_msgs std_msgs vtr_lidar)
+
 add_executable(${PROJECT_NAME}_map_annotation src/map_annotation.cpp)
 ament_target_dependencies(${PROJECT_NAME}_map_annotation rclcpp rosbag2 rosbag2_cpp sensor_msgs std_msgs vtr_lidar)
 
@@ -89,6 +92,7 @@ install(
     ${PROJECT_NAME}_inter_exp_merging
     ${PROJECT_NAME}_change_detection
     ${PROJECT_NAME}_change_detection_fake
+    ${PROJECT_NAME}_change_detection_fake_one_frame
     ${PROJECT_NAME}_map_annotation
     # ${PROJECT_NAME}_ground_extraction
     # ${PROJECT_NAME}_terrain_assessment

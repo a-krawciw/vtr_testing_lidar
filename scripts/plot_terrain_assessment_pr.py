@@ -18,6 +18,7 @@ plt.rcParams.update({
     'axes.linewidth': 1,
     'axes.titlesize': 10,
     'axes.labelsize': 10,
+    'legend.fontsize': 10,
 })
 
 import sqlite3
@@ -259,7 +260,7 @@ def global_get_label_pr(threshold):
 
 ## NOTE: this is plotted from not including any ground truth points
 def main(data_dir_base, dest):
-  fig, axs = setup_figure(1, 3, 1.2, 1.2, l=0.12, r=0.05, b=0.35, t=0.1, w=0.5, h=0.25)
+  fig, axs = setup_figure(1, 3, 1.0, 1.0, l=0.12, r=0.05, b=0.4, t=0.1, w=0.5, h=0.25)
 
   rows = ['parkinglot', 'marsdome', 'grove']
   for i, row in enumerate(rows):
@@ -355,7 +356,7 @@ def main(data_dir_base, dest):
     # precision recall curve
     print("Likelihood")
     result_txt = osp.join(dest, 'pr_curves' , row, 'no_prior_no_filtering.txt')
-    thresholds = plot_precision_recall(ax, filtered_costs, filtered_results[:, 3]>0.5, color='r', label="No Prior \& No Filtering", save=result_txt)
+    thresholds = plot_precision_recall(ax, filtered_costs, filtered_results[:, 3]>0.5, color='r', label="No Prior \& Filtering", save=result_txt)
     # downsampled_thresholds = thresholds[:1]
     # for th in thresholds[1:]:
     #   if np.abs(th - downsampled_thresholds[-1]) > 0.1:
@@ -398,7 +399,7 @@ def main(data_dir_base, dest):
   handles, labels = axs[0].get_legend_handles_labels()
   fig.legend(handles, labels, loc='lower center', ncol=4, frameon=False)
 
-  plt.savefig(os.path.join(dest, 'pr_curves.pdf'), pad_inches=0.0, bbox_inches='tight')
+  plt.savefig(os.path.join(dest, 'terrain_pr_curves.pdf'), pad_inches=0.0, bbox_inches='tight')
   plt.close()
   # plt.show()
 

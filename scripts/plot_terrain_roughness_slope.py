@@ -105,7 +105,7 @@ def get_result_from_msg(msg):
 
 ## NOTE: this is plotted from not including any ground truth points
 def main(data_dir_base, dest):
-  fig, axs = setup_figure(2, 3, 1.2, 1.2, l=0.10, r=0.05, b=0.07, t=0.07, w=0.3, h=0.25)
+  fig, axs = setup_figure(2, 3, 1.0, 1.0, l=0.10, r=0.05, b=0.07, t=0.07, w=0.33, h=0.30)
 
   rows = ['parkinglot', 'marsdome', 'grove']
   for i, row in enumerate(rows):
@@ -180,7 +180,7 @@ def main(data_dir_base, dest):
   axs[0, 1].set_title('MarsDome Route')
   axs[0, 2].set_title('Grove Route')
 
-  plt.savefig(os.path.join(dest, 'terrain_hist.pdf'), pad_inches=0.0, bbox_inches='tight')
+  plt.savefig(os.path.join(dest, 'terrain_rough_slope_hist.pdf'), pad_inches=0.0, bbox_inches='tight')
   plt.close()
   # plt.show()
 
