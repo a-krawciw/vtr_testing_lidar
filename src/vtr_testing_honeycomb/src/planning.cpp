@@ -262,6 +262,11 @@ int main(int argc, char **argv) {
                       std::to_string(timestamp);
     status_publisher->publish(status_msg);
 
+    if (tactic->routeCompleted()) {
+      CLOG(WARNING, "test") << "Route completed!";
+      break;
+    }
+
     ++frame;
   }
 

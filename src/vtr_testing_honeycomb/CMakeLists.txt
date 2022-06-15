@@ -52,12 +52,6 @@ ament_target_dependencies(${PROJECT_NAME}_dynamic_detection rclcpp rosbag2 rosba
 add_executable(${PROJECT_NAME}_inter_exp_merging src/inter_exp_merging.cpp)
 ament_target_dependencies(${PROJECT_NAME}_inter_exp_merging rclcpp rosbag2 rosbag2_cpp vtr_lidar)
 
-# add_executable(${PROJECT_NAME}_ground_extraction src/ground_extraction.cpp)
-# ament_target_dependencies(${PROJECT_NAME}_ground_extraction rclcpp rosbag2 rosbag2_cpp vtr_lidar)
-
-# add_executable(${PROJECT_NAME}_terrain_assessment src/terrain_assessment.cpp)
-# ament_target_dependencies(${PROJECT_NAME}_terrain_assessment rclcpp rosbag2 rosbag2_cpp vtr_lidar)
-
 add_executable(${PROJECT_NAME}_change_detection src/change_detection.cpp)
 ament_target_dependencies(${PROJECT_NAME}_change_detection rclcpp rosbag2 rosbag2_cpp vtr_lidar)
 
@@ -66,6 +60,12 @@ ament_target_dependencies(${PROJECT_NAME}_change_detection_fake rclcpp rosbag2 r
 
 add_executable(${PROJECT_NAME}_change_detection_fake_one_frame src/change_detection_fake_one_frame.cpp)
 ament_target_dependencies(${PROJECT_NAME}_change_detection_fake_one_frame rclcpp rosbag2 rosbag2_cpp sensor_msgs std_msgs vtr_lidar)
+
+# add_executable(${PROJECT_NAME}_ground_extraction src/ground_extraction.cpp)
+# ament_target_dependencies(${PROJECT_NAME}_ground_extraction rclcpp rosbag2 rosbag2_cpp vtr_lidar)
+
+# add_executable(${PROJECT_NAME}_terrain_assessment src/terrain_assessment.cpp)
+# ament_target_dependencies(${PROJECT_NAME}_terrain_assessment rclcpp rosbag2 rosbag2_cpp vtr_lidar)
 
 add_executable(${PROJECT_NAME}_map_annotation src/map_annotation.cpp)
 ament_target_dependencies(${PROJECT_NAME}_map_annotation rclcpp rosbag2 rosbag2_cpp sensor_msgs std_msgs vtr_lidar)
@@ -93,9 +93,9 @@ install(
     ${PROJECT_NAME}_change_detection
     ${PROJECT_NAME}_change_detection_fake
     ${PROJECT_NAME}_change_detection_fake_one_frame
-    ${PROJECT_NAME}_map_annotation
     # ${PROJECT_NAME}_ground_extraction
     # ${PROJECT_NAME}_terrain_assessment
+    ${PROJECT_NAME}_map_annotation
     ${PROJECT_NAME}_plot_map_maintenance
     ${PROJECT_NAME}_plot_memap_maintenance
   LIBRARY DESTINATION lib
