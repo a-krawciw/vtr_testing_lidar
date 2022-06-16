@@ -36,6 +36,7 @@
         # "lidar.ground_extraction",
         # "lidar.obstacle_detection",
         # "lidar.terrain_assessment",
+        # "lidar.safe_corridor",
       ]
 
     ############ tactic configuration ############
@@ -88,9 +89,10 @@
           # localization thread modules
           "recall",
           "icp",
-          # "change_detection",
-          # "ground_extraction",
-          # "obstacle_detection",
+          ## "enable the following for online obstacle detection"
+          # "safe_corridor",
+          # "fake_obstacle",
+          # "change_detection_sync",
           "memory",
         ]
 
@@ -262,6 +264,61 @@
         # threshold
         min_matched_ratio: 0.3
 
+      safe_corridor:
+        type: "lidar.safe_corridor"
+        # corridor computation
+        lookahead_distance: 5.0
+        corridor_width: 3.5 ## TODO: specified by the user
+        influence_distance: 1.0
+        # cost map
+        resolution: 0.25
+        size_x: 16.0
+        size_y: 8.0
+        # general
+        visualize: true
+
+      fake_obstacle:
+        type: "lidar.fake_obstacle"
+
+        path: "/ext0/ASRL/vtr_testing_lidar/3dmodels"
+        objs: ["cone", "human", "box_large"]
+        types: [1, 1, 1]
+        xs: [4.0, 6.0, 2.5]
+        ys: [0.5, -1.0, -1.5]
+        zs: [-1.9, -1.9, -1.9]
+        rolls: [0.0, 0.0, 0.0]
+        pitchs: [0.0, 0.0, 0.0]
+        yaws: [0.0, 0.0, 0.0]
+
+        visualize: true
+
+      change_detection_sync:
+        type: "lidar.change_detection_v3"
+        # change detection
+        detection_range: 8.0
+        search_radius: 0.25
+
+        negprob_threshold: 0.015 # -1.86 without prior, 0.015 with prior
+
+        use_prior: true
+        alpha0: 3.0 #  6 / 2  (6 pseudo observations)
+        beta0: 0.03 #  0.01 * 6 / 2 (6 pseudo observations of variance 0.01)
+
+        use_support_filtering: true
+        support_radius: 0.25
+        support_variance: 0.05
+        support_threshold: 2.5
+
+        influence_distance: 0.5
+        minimum_distance: 0.3
+
+        # cost map
+        resolution: 0.25
+        size_x: 16.0
+        size_y: 8.0
+        # general
+        visualize: true
+
       memory:
         type: "graph_mem_manager"
 
@@ -352,14 +409,14 @@
 
     ############ path planning configuration ############
     path_planning:
-      type: teb
+      type: teb.lidar
       control_period: 100 # ms
       teb:
         # vtr specific
         visualize: true
         extrapolate: true
         extrapolation_timeout: 2.0
-        lookahead_distance: 8.0
+        lookahead_distance: 8.5
         # robot specific
         robot_model: circular
         robot_radius: 0.5
@@ -373,7 +430,7 @@
         max_vel_theta: 0.3
         min_turning_radius: 3.0
         weight_viapoint: 0.5
-        weight_costmap: 1000.0
+        weight_costmap: 100.0
 
     ############ custom objects ############
     fake_object:
