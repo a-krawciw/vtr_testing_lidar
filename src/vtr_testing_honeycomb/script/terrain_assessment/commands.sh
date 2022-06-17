@@ -66,6 +66,23 @@ LOC_INPUTS=(
   rosbag2_2021_12_30-15_07_01
 )
 
+# grove
+export VTRHDATA=${VTRHDATABASE}/grove_short
+export VTRHRESULT=${VTRHRESULTBASE}/grove_short
+mkdir -p ${VTRHRESULT}
+NUM_FRAMES=10000
+ODO_INPUT=rosbag2_2022_06_16-15_12_53
+LOC_INPUTS=(
+  # rosbag2_2022_06_16-15_12_53
+  rosbag2_2022_06_16-15_14_52
+  rosbag2_2022_06_16-15_16_17
+  rosbag2_2022_06_16-15_21_20
+  rosbag2_2022_06_16-15_23_30
+  rosbag2_2022_06_16-15_25_30  # use this sequence
+  rosbag2_2022_06_16-15_27_52
+  rosbag2_2022_06_16-15_30_40
+)
+
 ## Use the following command to run odometry and localization
 
 # Run odometry
