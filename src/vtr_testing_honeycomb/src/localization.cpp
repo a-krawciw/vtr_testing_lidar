@@ -110,11 +110,14 @@ int main(int argc, char **argv) {
   auto privileged_path = graph->getSubgraph(0ul, evaluator);
   std::stringstream ss;
   ss << "Repeat vertices: ";
+  double total_distance = 0.0;
   for (auto it = privileged_path->begin(0ul); it != privileged_path->end();
        ++it) {
     ss << it->v()->id() << " ";
+    total_distance += it->T().r_ab_inb().norm();
     sequence.push_back(it->v()->id());
   }
+  ss << "Total distance: " << total_distance;
   CLOG(WARNING, "test") << ss.str();
 
   EdgeTransform T_loc_odo_init(true);
@@ -218,6 +221,11 @@ int main(int argc, char **argv) {
                       std::to_string(frame) + " with timestamp " +
                       std::to_string(timestamp);
     status_publisher->publish(status_msg);
+
+    if (tactic->routeCompleted()) {
+      CLOG(WARNING, "test") << "Route completed!";
+      break;
+    }
 
     ++frame;
   }

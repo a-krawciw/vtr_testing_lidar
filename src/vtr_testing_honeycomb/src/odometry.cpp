@@ -48,6 +48,9 @@ int main(int argc, char **argv) {
       node->declare_parameter<std::string>("data_dir", "/tmp");
   fs::path data_dir{utils::expand_user(utils::expand_env(data_dir_str))};
 
+  // Number of frames to include
+  const auto num_frames = node->declare_parameter<int>("num_frames", 100000);
+
   // Configure logging
   const auto log_to_file = node->declare_parameter<bool>("log_to_file", false);
   const auto log_debug = node->declare_parameter<bool>("log_debug", false);
@@ -143,6 +146,7 @@ int main(int argc, char **argv) {
     rclcpp::spin_some(node);
     if (test_control.terminate()) break;
     if (!test_control.play()) continue;
+    if (num_frames > 0 && frame >= num_frames) break;
     std::this_thread::sleep_for(
         std::chrono::milliseconds(test_control.delay()));
 

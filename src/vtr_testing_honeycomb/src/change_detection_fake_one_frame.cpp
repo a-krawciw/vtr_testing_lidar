@@ -66,7 +66,8 @@ int main(int argc, char **argv) {
   tf_sbc->sendTransform(msg);
 
   // Parameters
-  const unsigned run_id = node->declare_parameter<int>("run_id", 1);
+  const unsigned run_id = node->declare_parameter<int>("run_id", 0);
+  const unsigned vtx_id = node->declare_parameter<int>("vtx_id", 0);
 
   // Publisher
   const auto fake_pcd_pub = node->create_publisher<sensor_msgs::msg::PointCloud2>("change_detection_fake_pcd", rclcpp::QoS(10));
@@ -150,31 +151,15 @@ int main(int argc, char **argv) {
   };
   // clang-format
 
-  // thread handling variables
-  TestControl test_control(node);
-
-  size_t depth = 10;
-  std::queue<tactic::VertexId> ids;
-
-  /// Create a temporal evaluator
-  auto evaluator = std::make_shared<tactic::TemporalEvaluator<tactic::GraphBase>>(*graph);
-
-  auto subgraph = graph->getSubgraph(tactic::VertexId(run_id, 0), evaluator);
-  for (auto it = subgraph->begin(tactic::VertexId(run_id, 0)); it != subgraph->end();) {
-    /// test control
-    if (!rclcpp::ok()) break;
-    rclcpp::spin_some(node);
-    if (test_control.terminate()) break;
-    if (!test_control.play()) continue;
-    std::this_thread::sleep_for(std::chrono::milliseconds(test_control.delay()));
-
+  {
     /// caches
     lidar::LidarQueryCache qdata;
     lidar::LidarOutputCache output;
 
     qdata.node = node;
 
-    const auto vertex_odo = it->v();
+    const auto vid_odo = tactic::VertexId(run_id, vtx_id);
+    const auto vertex_odo = graph->at(vid_odo);
 
     const auto scan_msg = vertex_odo->retrieve<PointScan<PointWithInfo>>("filtered_point_cloud", "vtr_lidar_msgs/msg/PointScan");
     auto locked_scan_msg_ref = scan_msg->sharedLocked();  // lock the msg
@@ -204,7 +189,6 @@ int main(int argc, char **argv) {
         }
       }
     }
-    if (!vid_loc.isValid()) continue;
 
     // load the map pointer
     const auto pointmap_ptr = [&] {
@@ -259,15 +243,6 @@ int main(int argc, char **argv) {
 #if true
     module->runAsync(qdata, output, graph, nullptr, {}, {});
 #endif
-    // memory management
-    ids.push(it->v()->id());
-    if (ids.size() > depth) {
-      graph->at(ids.front())->unload();
-      ids.pop();
-    }
-
-    // increment
-    ++it;
   }
 
   rclcpp::shutdown();

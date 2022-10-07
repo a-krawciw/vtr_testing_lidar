@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
   Eigen::setNbThreads(1);
 
   rclcpp::init(argc, argv);
-  const std::string node_name = "intra_exp_merging_" + random_string(5);
+  const std::string node_name = "dynamic_detection_" + random_string(5);
   auto node = rclcpp::Node::make_shared(node_name);
 
   // Output directory
@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
 
   // Module
   auto module_factory = std::make_shared<ROSModuleFactory>(node);
-  auto module = module_factory->get("odometry.intra_exp_merging");
+  auto module = module_factory->get("odometry.dynamic_detection");
 
   // thread handling variables
   TestControl test_control(node);
@@ -86,7 +86,7 @@ int main(int argc, char **argv) {
     lidar::LidarOutputCache output;
 
     qdata.node = node;
-    qdata.intra_exp_merging_async.emplace(it->v()->id());
+    qdata.dynamic_detection_async.emplace(it->v()->id());
 
     module->runAsync(qdata, output, graph, nullptr, {}, {});
 
