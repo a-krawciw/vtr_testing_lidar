@@ -1,0 +1,20 @@
+{
+    "files.associations": {
+        "bitset": "cpp",
+        "memory": "cpp",
+        "random": "cpp",
+        "future": "cpp",
+        "optional": "cpp",
+        "*.ipp": "cpp",
+        "array": "cpp",
+        "deque": "cpp",
+        "forward_list": "cpp",
+        "list": "cpp",
+        "string": "cpp",
+        "unordered_map": "cpp",
+        "unordered_set": "cpp",
+        "vector": "cpp",
+        "string_view": "cpp",
+        "initializer_list": "cpp"
+    }
+}
