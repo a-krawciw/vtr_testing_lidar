@@ -23,7 +23,7 @@
 
 #include "vtr_testing_honeycomb/utils.hpp"
 #include <boost/algorithm/string.hpp>
-
+#include <regex>
 
 namespace fs = std::filesystem;
 using namespace vtr;
@@ -45,13 +45,21 @@ int main(int argc, char **argv) {
 
   // teach sequence ros2bag
   const auto teach_dir_str =
-      node->declare_parameter<std::string>("teach_bag", "./tmp");
-  fs::path odo_dir{utils::expand_user(utils::expand_env(teach_dir_str))};
+      node->declare_parameter<std::string>("sequence_dir", "./tmp");
+  fs::path seq_dir{utils::expand_user(utils::expand_env(teach_dir_str))};
 
-  // repeat sequence ros2bag
-  const auto rep_dir_str =
-      node->declare_parameter<std::string>("repeat_bag", "./tmp");
-  fs::path rep_dir{utils::expand_user(utils::expand_env(rep_dir_str))};
+  fs::path odo_dir;
+  std::vector<fs::path> repeat_dirs;
+
+  std::regex teach_regex(".*_teach"); 
+  std::regex repeat_regex(".*_repeat"); 
+
+  for (const auto & file: fs::directory_iterator(seq_dir)) {
+    if (file.is_directory() && std::regex_search(file.path().string(), teach_regex))
+      odo_dir = file;
+    else if (file.is_directory() && std::regex_search(file.path().string(), repeat_regex))
+      repeat_dirs.push_back(file);
+  }
 
   // Output directory
   const auto data_dir_str =
@@ -74,9 +82,12 @@ int main(int argc, char **argv) {
   }
   configureLogging(log_filename, log_debug, log_enabled);
 
-  CLOG(WARNING, "test") << "Teach Directory: " << odo_dir.string();
-  CLOG(WARNING, "test") << "Repeat Directory: " << rep_dir.string();
-  CLOG(WARNING, "test") << "Output Directory: " << data_dir.string();
+  
+
+  CLOG(INFO, "test") << "Teach Directory: " << odo_dir.string();
+  for (auto & file : repeat_dirs)
+    CLOG(INFO, "test") << "Repeat Directory: " << file.string();
+  CLOG(INFO, "test") << "Output Directory: " << data_dir.string();
 
   std::vector<std::string> parts;
   boost::split(parts, teach_dir_str, boost::is_any_of("/"));
@@ -229,11 +240,13 @@ int main(int argc, char **argv) {
 //
 //-----------Repeat Pass-----------------
 //
+
+for (auto& repeat_dir : repeat_dirs) {
   rosbag2_cpp::Reader reader2;
 
   try {
     // Load dataset
-    storage_options.uri = rep_dir.string();
+    storage_options.uri = repeat_dir.string();
 
     reader2.open(storage_options, converter_options);
     reader2.set_filter(filter);
@@ -343,6 +356,10 @@ int main(int argc, char **argv) {
     }
 
     ++frame;
+  }
+    tactic->finishRun();
+    CLOG(WARNING, "test") << "Saving pose graph.";
+    graph->save();
   }
   CLOG(ERROR, "test") << "Reached the end";
 

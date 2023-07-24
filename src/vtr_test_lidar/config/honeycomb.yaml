@@ -79,9 +79,9 @@
           "icp",
           "mapping",
           "vertex_test",
-          # "intra_exp_merging",
-          # "dynamic_detection",
-          # "inter_exp_merging",
+          "intra_exp_merging",
+          "dynamic_detection",
+          "inter_exp_merging",
           "memory",
         ]
 
@@ -92,7 +92,7 @@
           ## "enable the following for online obstacle detection"
           # "safe_corridor",
           # "fake_obstacle",
-          # "change_detection_sync",
+          #"change_detection_sync",
           "memory",
         ]
 

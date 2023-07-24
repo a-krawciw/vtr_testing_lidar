@@ -44,6 +44,9 @@ add_executable(${PROJECT_NAME}_TandR src/full_pipeline_change.cpp)
 ament_target_dependencies(${PROJECT_NAME}_TandR rclcpp rosbag2 rosbag2_cpp vtr_lidar)
 
 
+add_executable(process_sequence src/full_pipeline_sequence.cpp)
+ament_target_dependencies(process_sequence rclcpp rosbag2 rosbag2_cpp vtr_lidar)
+
 add_executable(${PROJECT_NAME}_graph_info src/graph_learning.cpp)
 ament_target_dependencies(${PROJECT_NAME}_graph_info rclcpp rosbag2 rosbag2_cpp vtr_tactic vtr_lidar)
 
@@ -101,6 +104,7 @@ install(
     ${PROJECT_NAME}_change_detection_fake_one_frame
     # ${PROJECT_NAME}_ground_extraction
     # ${PROJECT_NAME}_terrain_assessment
+    process_sequence
     ${PROJECT_NAME}_map_annotation
     ${PROJECT_NAME}_plot_map_maintenance
     ${PROJECT_NAME}_plot_memap_maintenance
