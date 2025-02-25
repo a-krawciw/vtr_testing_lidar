@@ -11,7 +11,7 @@
 
 #include "rosbag2_cpp/reader.hpp"
 #include "rosbag2_cpp/readers/sequential_reader.hpp"
-#include "rosbag2_cpp/storage_options.hpp"
+// #include "rosbag2_cpp/storage_options.hpp"
 
 #include "sensor_msgs/msg/point_cloud2.hpp"
 

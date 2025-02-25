@@ -8,7 +8,7 @@
 #include "rosbag2_cpp/reader.hpp"
 #include "rosbag2_cpp/writer.hpp"
 #include "rosbag2_cpp/readers/sequential_reader.hpp"
-#include "rosbag2_cpp/storage_options.hpp"
+#include "rosbag2_storage/storage_options.hpp"
 #include "rosbag2_storage/topic_metadata.hpp"
 
 #include <sensor_msgs/msg/image.hpp>

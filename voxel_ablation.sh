@@ -3,19 +3,21 @@
 source $VTRSRC/main/install/setup.bash
 source $VTRROOT/vtr_testing_lidar/install/setup.bash
 
-map_voxels=(0.1 0.2 0.3)
-live_voxels=(0.15)
+map_voxels=(0.1)
+live_voxels=(0.05)
 sequences=(short_loop long_loop parking_lot mars_dome_indoor flat_dome far_loop library_lot garden_path)
 
 graph_dir=$VTRROOT/range_paper/graphs
 model_dir=$VTRROOT/range_paper/checkpoints
 
 #data splits
-train_sequences=(MarsLoop)
+train_sequences=(ParkingLoop)
 val_sequences=(LongLoop)
 test_sequences=()
 
 trap exit SIGINT
+
+for i in {1..10}; do echo -e '\a'; sleep 0.1; done
 
 
 echo "Training"
@@ -44,6 +46,9 @@ for sequence in ${train_sequences[@]}; do
 	        
 	        #python3 $VTRROOT/range_diff/src/train.py -g $graph_dir/$graph_name -o $model_dir/$graph_name
 	        #mv $model_dir/$graph_name/checkpoint_epoch10.pth $model_dir/$graph_name/final.pth
+		for i in {1..10}; do echo -e '\a'; sleep 0.1; done
+
+		
 
 	    done
     done

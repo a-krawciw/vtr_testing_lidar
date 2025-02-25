@@ -1,0 +1,51 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/alec/ASRL/vtr3/vtr_testing_lidar/install/vtr_test_lidar/include/**",
+        "/home/alec/ASRL/vtr3/vtr_testing_lidar/install/rviz_vtr_plugins/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_navigation/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_vision/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_vision_msgs/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_radar_lidar/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_lidar/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_torch/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_mission_planning/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_route_planning/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_radar/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_path_planning/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_tactic/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_tactic_msgs/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_pose_graph/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_storage/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_radar_msgs/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_pose_graph_msgs/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_path_planning_msgs/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_navigation_msgs/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_logging/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_lidar_msgs/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_common/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/vtr_common_msgs/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/steam/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/navtech_msgs/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/lgmath/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/gpusurf/include/**",
+        "/home/alec/ASRL/vtr3/src/main/install/cudpp/include/**",
+        "/opt/ros/humble/include/**",
+        "/home/alec/ASRL/vtr3/vtr_testing_lidar/src/rviz_vtr_plugins/include/**",
+        "/home/alec/ASRL/vtr3/vtr_testing_lidar/src/vtr_test_lidar/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

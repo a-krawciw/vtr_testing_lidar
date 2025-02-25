@@ -9,7 +9,7 @@
 
 #include "rosbag2_cpp/reader.hpp"
 #include "rosbag2_cpp/readers/sequential_reader.hpp"
-#include "rosbag2_cpp/storage_options.hpp"
+#include "rosbag2_storage/storage_options.hpp"
 
 #include "sensor_msgs/msg/point_cloud2.hpp"
 
@@ -47,6 +47,8 @@ int main(int argc, char **argv) {
   const auto teach_dir_str =
       node->declare_parameter<std::string>("sequence_dir", "./tmp");
   fs::path seq_dir{utils::expand_user(utils::expand_env(teach_dir_str))};
+
+  const auto storage_type = node->declare_parameter<std::string>("storage_type", "mcap");
 
   fs::path odo_dir;
   std::vector<fs::path> repeat_dirs;
@@ -110,7 +112,6 @@ int main(int argc, char **argv) {
   // Tactic Callback
   auto callback = std::make_shared<RvizTacticCallback>(node);
 
-
   const std::string graph_name = node->declare_parameter<std::string>("name", "graph");
   float map_voxel_size = 0;
   node->get_parameter<float>("odometry.mapping.map_voxel_size", map_voxel_size);
@@ -134,7 +135,11 @@ int main(int argc, char **argv) {
 
   /// robot lidar transformation is hard-coded - check measurements.
   Eigen::Matrix4d T_lidar_robot_mat;
-  T_lidar_robot_mat << 1, 0, 0, -0.025, 0, -1, 0, -0.002, 0, 0, -1, 0.87918, 0, 0, 0, 1;
+  //T_lidar_robot_mat //<< 1, 0, 0, -0.025, 0, -1, 0, -0.002, 0, 0, -1, 0.87918, 0, 0, 0, 1;
+  T_lidar_robot_mat << -1, 0,  0,  0.025,
+        0, 1, 0, 0.00200248,
+        0, 0, -1, 0.843,
+        0, 0, 0, 1;
   EdgeTransform T_lidar_robot(T_lidar_robot_mat);
   T_lidar_robot.setZeroCovariance();
   CLOG(WARNING, "test") << "Transform from " << robot_frame << " to "
@@ -156,7 +161,7 @@ int main(int argc, char **argv) {
   converter_options.output_serialization_format = "cdr";
   rosbag2_storage::StorageOptions storage_options;
   storage_options.uri = odo_dir.string();
-  storage_options.storage_id = "sqlite3";
+  storage_options.storage_id = storage_type;
   storage_options.max_bagfile_size = 0;  // default
   storage_options.max_cache_size = 0;    // default
   rosbag2_storage::StorageFilter filter;
@@ -189,8 +194,8 @@ int main(int argc, char **argv) {
     rclcpp::SerializedMessage msg(*bag_message->serialized_data);
     auto points = std::make_shared<sensor_msgs::msg::PointCloud2>();
     serializer.deserialize_message(&msg, points.get());
-    storage::Timestamp timestamp =
-        points->header.stamp.sec * 1e9 + points->header.stamp.nanosec;
+    storage::Timestamp timestamp = bag_message->time_stamp;
+        //points->header.stamp.sec * 1e9 + points->header.stamp.nanosec;
 
     if (starttime < 1)
       starttime = timestamp;
@@ -226,16 +231,47 @@ int main(int argc, char **argv) {
     // execute the pipeline
     tactic->input(query_data);
 
+
+
     std_msgs::msg::String status_msg;
     status_msg.data = "Finished processing lidar frame " +
-                      std::to_string(frame) + " with timestamp " +
+                      std::to_string(frame) + " from " +
+                      odo_dir.string() + " with timestamp " +
                       std::to_string(timestamp);
     status_publisher->publish(status_msg);
 
+    // {
+    //   auto plock = tactic->lockPipeline();
+    //   if (*query_data->vertex_test_result == VertexTestResult::CREATE_VERTEX) {
+    //     auto vertex = graph->at(*query_data->vid_odo);
+
+    //     using StringLM = storage::LockableMessage<std_msgs::msg::String>;
+    //     auto frame_info_msg = std::make_shared<StringLM>(std::make_shared<std_msgs::msg::String>(status_msg), timestamp);
+    //     vertex->insert<std_msgs::msg::String>(
+    //         "teach_info", "std_msgs/msg/String", frame_info_msg);
+    //     CLOG(DEBUG, "lidar.pipeline") << "Saved new vertex status info" << vertex;
+    //   }
+    // }
+
+    
+
     ++frame;
+
+
+    if (frame % 600 == 0) {
+      auto plock = tactic->lockPipeline();
+      CLOG(WARNING, "test") << "Saving pose graph.";
+
+      graph->save();
+    }
   }
 
-  tactic->finishRun();
+
+  {
+    auto plock = tactic->lockPipeline();
+    tactic->finishRun();
+    pipeline_output->chain->reset();
+  } 
   CLOG(WARNING, "test") << "Saving pose graph.";
   graph->save();
 
@@ -309,8 +345,7 @@ for (auto& repeat_dir : repeat_dirs) {
     rclcpp::SerializedMessage msg(*bag_message->serialized_data);
     auto points = std::make_shared<sensor_msgs::msg::PointCloud2>();
     serializer.deserialize_message(&msg, points.get());
-    storage::Timestamp timestamp =
-        points->header.stamp.sec * 1e9 + points->header.stamp.nanosec;
+    storage::Timestamp timestamp = bag_message->time_stamp;
 
     CLOG(WARNING, "test") << "Loading lidar frame " << frame
                           << " with timestamp " << timestamp;
@@ -345,9 +380,10 @@ for (auto& repeat_dir : repeat_dirs) {
     try{ 
       // execute the pipeline
       tactic->input(query_data);
-      status_msg.data = "Finished processing lidar frame " +
-                        std::to_string(frame) + " with timestamp " +
-                        std::to_string(timestamp);
+      "Finished processing lidar frame " +
+                      std::to_string(frame) + " from " +
+                      repeat_dir.string() + " with timestamp " +
+                      std::to_string(timestamp);
     } catch(std::runtime_error& e) {
       CLOG(ERROR, "test") << "Pipeline failed for frame." << std::to_string(frame) << " Error: " << e.what();
 
@@ -358,11 +394,31 @@ for (auto& repeat_dir : repeat_dirs) {
       rclcpp::shutdown();
       break;
     }
+    {
+      auto plock = tactic->lockPipeline();
+      if (*query_data->vertex_test_result == VertexTestResult::CREATE_VERTEX) {
+        auto vertex = graph->at(*query_data->vid_odo);
+
+        using StringLM = storage::LockableMessage<std_msgs::msg::String>;
+        auto frame_info_msg = std::make_shared<StringLM>(std::make_shared<std_msgs::msg::String>(status_msg), timestamp);
+        vertex->insert<std_msgs::msg::String>(
+            "repeat_info", "std_msgs/msg/String", frame_info_msg);
+        CLOG(DEBUG, "lidar.pipeline") << "Saved new vertex status info" << vertex;
+      }
+    }
     status_publisher->publish(status_msg);
 
     if (tactic->routeCompleted()) {
       CLOG(WARNING, "test") << "Route completed!";
       break;
+    }
+
+
+    if (frame % 600 == 0) {
+      auto plock = tactic->lockPipeline();
+      CLOG(WARNING, "test") << "Saving pose graph.";
+
+      graph->save();
     }
 
     ++frame;

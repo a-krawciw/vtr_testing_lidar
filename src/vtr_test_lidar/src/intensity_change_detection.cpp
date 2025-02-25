@@ -9,7 +9,7 @@
 
 #include "rosbag2_cpp/reader.hpp"
 #include "rosbag2_cpp/readers/sequential_reader.hpp"
-#include "rosbag2_storage/storage_options.hpp"
+//#include "rosbag2_cpp/storage_options.hpp"
 
 #include "sensor_msgs/msg/point_cloud2.hpp"
 
@@ -23,7 +23,7 @@
 
 #include "vtr_testing_honeycomb/utils.hpp"
 #include <boost/algorithm/string.hpp>
-
+#include <regex>
 
 namespace fs = std::filesystem;
 using namespace vtr;
@@ -45,18 +45,28 @@ int main(int argc, char **argv) {
 
   // teach sequence ros2bag
   const auto teach_dir_str =
-      node->declare_parameter<std::string>("teach_bag", "./tmp");
-  fs::path odo_dir{utils::expand_user(utils::expand_env(teach_dir_str))};
+      node->declare_parameter<std::string>("sequence_dir", "./tmp");
+  fs::path seq_dir{utils::expand_user(utils::expand_env(teach_dir_str))};
 
-  // repeat sequence ros2bag
-  const auto rep_dir_str =
-      node->declare_parameter<std::string>("repeat_bag", "./tmp");
-  fs::path rep_dir{utils::expand_user(utils::expand_env(rep_dir_str))};
+  fs::path odo_dir;
+  std::vector<fs::path> repeat_dirs;
+
+  std::regex teach_regex(".*_teach"); 
+  std::regex repeat_regex(".*_repeat"); 
+
+  for (const auto & file: fs::directory_iterator(seq_dir)) {
+    if (file.is_directory() && std::regex_search(file.path().string(), teach_regex))
+      odo_dir = file;
+    else if (file.is_directory() && std::regex_search(file.path().string(), repeat_regex))
+      repeat_dirs.push_back(file);
+  }
 
   // Output directory
   const auto data_dir_str =
       node->declare_parameter<std::string>("data_dir", "./tmp");
   fs::path data_dir{utils::expand_user(utils::expand_env(data_dir_str))};
+
+  const bool reversed_path = node->declare_parameter<bool>("reversed_path", false);
 
   // Number of frames to include
   const auto num_frames = node->declare_parameter<int>("num_frames", 100000);
@@ -74,9 +84,12 @@ int main(int argc, char **argv) {
   }
   configureLogging(log_filename, log_debug, log_enabled);
 
-  CLOG(WARNING, "test") << "Teach Directory: " << odo_dir.string();
-  CLOG(WARNING, "test") << "Repeat Directory: " << rep_dir.string();
-  CLOG(WARNING, "test") << "Output Directory: " << data_dir.string();
+  
+
+  CLOG(INFO, "test") << "Teach Directory: " << odo_dir.string();
+  for (auto & file : repeat_dirs)
+    CLOG(INFO, "test") << "Repeat Directory: " << file.string();
+  CLOG(INFO, "test") << "Output Directory: " << data_dir.string();
 
   std::vector<std::string> parts;
   boost::split(parts, teach_dir_str, boost::is_any_of("/"));
@@ -118,10 +131,12 @@ int main(int argc, char **argv) {
   std::string lidar_frame = "lidar";
 
   auto points_topic = node->declare_parameter<std::string>("lidar_topic", "/points");
+  auto range_topic = node->declare_parameter<std::string>("range_topic", "/range_image");
+  auto intensity_topic = node->declare_parameter<std::string>("intensity_topic", "/signal");
 
   /// robot lidar transformation is hard-coded - check measurements.
   Eigen::Matrix4d T_lidar_robot_mat;
-  T_lidar_robot_mat << 1, 0, 0, -0.06, 0, 1, 0, 0, 0, 0, 1, -1.45, 0, 0, 0, 1;
+  T_lidar_robot_mat << 1, 0, 0, -0.025, 0, -1, 0, -0.002, 0, 0, -1, 0.87918, 0, 0, 0, 1;
   EdgeTransform T_lidar_robot(T_lidar_robot_mat);
   T_lidar_robot.setZeroCovariance();
   CLOG(WARNING, "test") << "Transform from " << robot_frame << " to "
@@ -141,18 +156,23 @@ int main(int argc, char **argv) {
   rosbag2_cpp::ConverterOptions converter_options;
   converter_options.input_serialization_format = "cdr";
   converter_options.output_serialization_format = "cdr";
-  rosbag2_storage::StorageOptions storage_options;
-  storage_options.uri = odo_dir.string();
-  storage_options.storage_id = "sqlite3";
-  storage_options.max_bagfile_size = 0;  // default
-  storage_options.max_cache_size = 0;    // default
-  rosbag2_storage::StorageFilter filter;
-  filter.topics.push_back(points_topic);
-  filter.topics.push_back("/" + points_topic);
+  // rosbag2_storage::StorageOptions storage_options;
+  // storage_options.uri = ;
+  // storage_options.storage_id = "mcap";
+  // storage_options.max_bagfile_size = 0;  // default
+  // storage_options.max_cache_size = 0;    // default
+
+  rosbag2_storage::StorageFilter points_filter;
+  points_filter.topics.push_back(points_topic);
+  points_filter.topics.push_back("/" + points_topic);
+
+  rosbag2_storage::StorageFilter range_filter;
+  points_filter.topics.push_back(points_topic);
+  points_filter.topics.push_back("/" + points_topic);
 
   rosbag2_cpp::Reader reader;
-  reader.open(storage_options, converter_options);
-  reader.set_filter(filter);
+  reader.open(odo_dir.string(), converter_options);
+  reader.set_filter(points_filter);
 
   rclcpp::Serialization<sensor_msgs::msg::PointCloud2> serializer;
 
@@ -220,30 +240,29 @@ int main(int argc, char **argv) {
     status_publisher->publish(status_msg);
 
     ++frame;
+
+
+    if (frame % 600 == 0) {
+      auto plock = tactic->lockPipeline();
+      CLOG(WARNING, "test") << "Saving pose graph.";
+
+      graph->save();
+    }
   }
 
-  tactic->finishRun();
+
+  {
+    auto plock = tactic->lockPipeline();
+    tactic->finishRun();
+    pipeline_output->chain->reset();
+  } 
   CLOG(WARNING, "test") << "Saving pose graph.";
   graph->save();
 
 //
 //-----------Repeat Pass-----------------
 //
-  rosbag2_cpp::Reader reader2;
 
-  try {
-    // Load dataset
-    storage_options.uri = rep_dir.string();
-
-    reader2.open(storage_options, converter_options);
-    reader2.set_filter(filter);
-  } catch (...) {
-    CLOG(ERROR, "test") << "Repeat bag invalid";
-    return 10;
-  }
-
-  tactic->setPipeline(PipelineMode::RepeatFollow);
-  tactic->addRun();
 
   // Get the path that we should repeat
   VertexId::Vector sequence;
@@ -255,16 +274,40 @@ int main(int argc, char **argv) {
   auto evaluator = std::make_shared<LocEvaluator>(*graph);
   auto privileged_path = graph->getSubgraph(0ul, evaluator);
   std::stringstream ss;
-  ss << "Repeat vertices: ";
+  ss << "Teach vertices: ";
   double total_distance = 0.0;
   for (auto it = privileged_path->begin(0ul); it != privileged_path->end();
        ++it) {
     ss << it->v()->id() << " ";
     total_distance += it->T().r_ab_inb().norm();
-    sequence.push_back(it->v()->id());
+    if (reversed_path) {
+      if (sequence.size() <= 706ul)
+        sequence.insert(sequence.begin(), it->v()->id());
+    } else {
+      sequence.push_back(it->v()->id());
+    }
   }
+  
   ss << "Total distance: " << total_distance;
   CLOG(WARNING, "test") << ss.str();
+
+for (auto& repeat_dir : repeat_dirs) {
+  rosbag2_cpp::Reader reader2;
+
+  try {
+    // Load dataset
+    // storage_options.uri = ;
+
+    reader2.open(repeat_dir.string(), converter_options);
+    reader2.set_filter(points_filter);
+  } catch (...) {
+    CLOG(ERROR, "test") << "Repeat bag invalid";
+    return 10;
+  }
+
+  tactic->setPipeline(PipelineMode::RepeatFollow);
+  tactic->addRun();
+
 
   EdgeTransform T_loc_odo_init(true);
   T_loc_odo_init.setCovariance(Eigen::Matrix<double, 6, 6>::Identity());
@@ -342,8 +385,21 @@ int main(int argc, char **argv) {
       break;
     }
 
+
+    if (frame % 600 == 0) {
+      auto plock = tactic->lockPipeline();
+      CLOG(WARNING, "test") << "Saving pose graph.";
+
+      graph->save();
+    }
+
     ++frame;
   }
+    auto plock = tactic->lockPipeline();
+    tactic->finishRun();
+    pipeline_output->chain->reset();
+    CLOG(WARNING, "test") << "Saving pose graph.";
+}
   CLOG(ERROR, "test") << "Reached the end";
 
 
